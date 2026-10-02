@@ -1,2 +1,4 @@
 __pycache__/
 *.pyc
+meditacoes/dist/
+meditacoes/tools/.cache/
