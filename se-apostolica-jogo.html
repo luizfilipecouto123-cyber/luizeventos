@@ -60,6 +60,8 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .bar{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 .note{font-size:.9rem;color:var(--muted)}
 .mt{margin-top:10px}
+.meter{width:120px;height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.meter i{display:block;height:100%;max-width:100%;background:var(--gold);border-radius:4px}
 .warn{margin-top:12px;padding:10px 12px;border-left:3px solid var(--red);background:var(--surface);font-size:.92rem}
 
 .tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;gap:2px;border-bottom:1px solid var(--line);margin:16px -16px 0;padding:0 10px;overflow-x:auto}
@@ -486,7 +488,7 @@ summary{cursor:pointer;list-style-position:outside}
 
 <section id="zero">
   <h2>Sessão zero</h2>
-  <p class="note">Para retomar uma partida salva, use "Importar partida" no menu. Responda o que quiser; o que ficar em branco o Claude preenche de modo verossímil e informa antes de começar. Toda lista tem "Outro", com texto livre.</p>
+  <p class="note">Para retomar uma partida salva, use Carregar no menu (ou "Carregar jogo externo", para um bloco de estado). Responda o que quiser; o que ficar em branco o Claude preenche de modo verossímil e informa antes de começar. Toda lista tem "Outro", com texto livre.</p>
 
   <fieldset><legend>1. Eleição</legend>
     <div class="row">
@@ -972,6 +974,8 @@ const lv=v=>clamp(Math.round(+v||3),1,5);
 function el(tag,attrs={},text){ const e=document.createElement(tag); for(const k in attrs){ if(k==="class") e.className=attrs[k]; else e.setAttribute(k,attrs[k]); } if(text!=null) e.textContent=text; return e; }
 const cssVar=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const lvColor=v=>cssVar("--l"+lv(v));
+/* data local (AAAA-MM-DD), não UTC: no Brasil, depois das 21h, toISOString() já dá o dia seguinte */
+function hojeISO(delta=0){ const d=new Date(); d.setDate(d.getDate()+delta); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
 
 /* ---------- calendário litúrgico (forma ordinária, calendário geral) ---------- */
 function easter(y){const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1;return Date.UTC(y,mo-1,da);}
@@ -1057,7 +1061,7 @@ function save(){
 let PREV=null; try{ PREV=localStorage.getItem(KEY+"-prev"); }catch(e){}
 S=migrate(load());
 function lerEspaco(n){ try{ const r=localStorage.getItem(keyDo(n)); return r?JSON.parse(r):null; }catch(e){ return null; } }
-function usarEspaco(n){ if(n===SLOT) return; if(S) save(); SLOT=n; KEY=keyDo(n); try{ localStorage.setItem(KEY0+"-espaco",String(n)); }catch(e){} S=migrate(load()); PREV=null; try{ PREV=localStorage.getItem(KEY+"-prev"); }catch(e){} tab="cena"; }
+function usarEspaco(n){ if(n===SLOT) return; if(S) save(); showAll=false; selKey=null; selNode=null; CV_EXTRA=[]; ZPRESET=null; SLOT=n; KEY=keyDo(n); try{ localStorage.setItem(KEY0+"-espaco",String(n)); }catch(e){} S=migrate(load()); PREV=null; try{ PREV=localStorage.getItem(KEY+"-prev"); }catch(e){} tab="cena"; }
 /* começar algo novo: usa o espaço atual se vazio, senão o primeiro vazio; com os três ocupados, pergunta antes de substituir */
 function espacoParaNovo(){
   if(!S) return true;
@@ -1129,7 +1133,7 @@ function cerimonia(tipo){
   setTimeout(()=>{ if(document.body.contains(ov)) fechar(); },6500);
 }
 function velaHtml(){ return '<span class="vela" aria-hidden="true"></span>'; }
-function startTimer(node,base){ const t0=Date.now(); const put=t=>{ node.innerHTML=velaHtml(); node.appendChild(document.createTextNode(t)); }; put(base); timer=setInterval(()=>put(`${base} ${Math.round((Date.now()-t0)/1000)} s`),1000); }
+function startTimer(node,base){ stopTimer(); const t0=Date.now(); const put=t=>{ node.innerHTML=velaHtml(); node.appendChild(document.createTextNode(t)); }; put(base); timer=setInterval(()=>put(`${base} ${Math.round((Date.now()-t0)/1000)} s`),1000); }
 function stopTimer(){ clearInterval(timer); timer=null; }
 
 /* ---------- texto do narrador ---------- */
@@ -1300,7 +1304,7 @@ function applyState(j,pool){
   if(Array.isArray(j.personagens)) j.personagens.forEach(p=>{ const x=p&&p.nome&&acharPessoa(p.nome); if(x) x.visto=S.nresp||0; });
   if(Array.isArray(j.atos)) j.atos.forEach(a=>{ if(!a||!a.titulo) return; const x=S.atos.find(y=>y.titulo===a.titulo); const o={titulo:String(a.titulo),instrumento:String(a.instrumento||x?.instrumento||""),estado:String(a.estado||x?.estado||""),grau:String(a.grau||x?.grau||""),data:String(a.data||x?.data||S.data_iso||"")}; if(x) Object.assign(x,o); else S.atos.push(o); });
   if(j.resumo) S.resumos.push(`${S.data_iso||""}: ${j.resumo}`);
-  if(j.papa && typeof j.papa==="object") for(const k in j.papa){ if(j.papa[k]!=null && j.papa[k]!=="") S.papa[k]=String(j.papa[k]); }
+  if(j.papa && typeof j.papa==="object") for(const k in j.papa){ const v=j.papa[k]; if(v!=null && v!=="" && typeof v!=="object") S.papa[k]=String(v); }
   return notices;
 }
 function pushHist(){
@@ -1379,7 +1383,7 @@ function zAtributos(){
 function zBrasaoPrev(){ const e=$("zBrasao"); if(e) e.innerHTML=brasaoSvg({nome_papal:$("z-papal").value,lema:$("z-lema").value,brasao:$("z-brasao").value},84,anoDe($("z-data").value)); }
 ["z-papal","z-lema","z-brasao","z-data"].forEach(id=>{ const e=$(id); if(e) e.addEventListener("input",zBrasaoPrev); });
 const val=id=>{ const e=$(id); if(e.tagName==="SELECT"){ return e.value==="__outro" ? ($(id+"-outro").value.trim()||"outro, a critério do narrador") : e.value; } return e.value.trim(); };
-(function(){ const d=new Date(); d.setDate(d.getDate()-1); $("z-data").value=d.toISOString().slice(0,10); })();
+$("z-data").value=hojeISO(-1);
 
 $("btnStop0").onclick=()=>ctl?.abort();
 $("btnStart").onclick=async()=>{
@@ -1450,7 +1454,7 @@ Neste primeiro JSON, envie TODOS os campos: "mundo" completo (8 a 15 fios de fun
 $("btnImport").onclick=async()=>{
   if(!sample){ $("zeroStatus").textContent="O Claude não está disponível nesta visualização."; return; }
   let bloco=$("z-bloco").value.trim();
-  if(bytes(bloco)>14000){ bloco=bloco.slice(0,13000); $("zeroStatus").textContent="O bloco era longo demais e foi cortado; o final pode ter ficado de fora."; }
+  if(bytes(bloco)>14000){ while(bytes(bloco)>13000) bloco=bloco.slice(0,Math.floor(bloco.length*.95)); $("zeroStatus").textContent="O bloco era longo demais e foi cortado; o final pode ter ficado de fora."; }
   if(bloco.length<80){ $("zeroStatus").textContent="Cole o bloco de estado completo antes de retomar."; return; }
   const prompt=`${seedFor("jogo")}
 
@@ -1477,7 +1481,9 @@ Neste primeiro JSON, reconstrua TODO o estado a partir do bloco: "eleicao", pain
     let {narr,json}=splitOut(text);
     if(!json&&narr.trim()){ const prevS=S; S=S||{data_iso:null,personagens:[],mundo:{fios:[]}}; json=await repararEstado(narr); S=prevS; }
     if(!json){ $("zeroStatus").textContent="O estado não pôde ser reconstruído. Tente de novo."; return; }
-    S=newState({}); PREV=null; applyState(json); if(!S.hist.length) pushHist();
+    /* o estado de partida segue a época do bloco: numa partida histórica, nada de elenco, facções e Igrejas de hoje */
+    const dImp=String(json.data_iso||json.eleicao||"").slice(0,10), zImp=/^\d{4}-\d{2}-\d{2}$/.test(dImp)?{data:dImp}:{};
+    S=newState(zImp); S.papa={}; PREV=null; applyState(json); if(!S.eleicao) S.eleicao=S.data_iso; if(!S.hist.length) pushHist();
     S.log.push({r:"s",t:"Partida retomada de um bloco salvo."});
     const parts=narr.split(/\n-{3,}\s*\n/); parts.forEach(pt=>{ if(pt.trim()) S.log.push({r:"n",t:pt.trim()}); });
     save(); box.innerHTML=""; $("zeroStatus").textContent=""; tab="cena"; render(); scrollLog();
@@ -1503,7 +1509,7 @@ function buildChips(){
       if(kind==="tab") setTab(arg);
       else if(kind==="save") openSave();
       else if(kind==="retif") retificar();
-      else if(kind==="send"){ $("input").value=cmd; send(); }
+      else if(kind==="send"){ if(ctl) return; $("input").value=cmd; send(); }
       else if(kind==="dlg") abrirConversa(null);
       else if(kind==="caixa") abrirCaixa();
       else { const t=$("input"); t.value=cmd+t.value.replace(/^\/\S+\s*/,""); t.focus(); t.setSelectionRange(t.value.length,t.value.length); }
@@ -1523,7 +1529,7 @@ function renderLog(){
     else { const d=el("div",{class:"msg-n"}); renderNarr(d,m.t); log.appendChild(d); }
   });
   const o=el("div",{class:"opts"});
-  (S.opcoes||[]).forEach((t,i)=>{ const b=el("button",{type:"button",class:"opt"}); b.appendChild(el("span",{class:"n"},String(i+1))); b.appendChild(document.createTextNode(t)); b.onclick=()=>{ $("input").value=t; send(); }; o.appendChild(b); });
+  (S.opcoes||[]).forEach((t,i)=>{ const b=el("button",{type:"button",class:"opt"}); b.appendChild(el("span",{class:"n"},String(i+1))); b.appendChild(document.createTextNode(t)); b.onclick=()=>{ if(ctl) return; $("input").value=t; send(); }; o.appendChild(b); });
   if(o.children.length){
     const n=o.children.length;
     const cb=el("button",{type:"button",class:"opt fixa"}); cb.appendChild(el("span",{class:"n"},String(n+1))); cb.appendChild(ic("conselho",18)); cb.appendChild(document.createTextNode("Pedir conselho sobre como agir (diga a quem, ou envie assim para ouvir quem estiver à mão)"));
@@ -1547,7 +1553,7 @@ function renderCaixa(){
   const u=S.caixa.find(m=>!m.lida&&!m.resposta&&m.urgencia==="alta"&&/audi[êe]ncia/i.test(m.tipo)), w=$("urgente");
   w.classList.toggle("hidden",!u||!!S.fim); w.innerHTML="";
   if(u&&!S.fim){ w.appendChild(ic("alerta",20)); w.appendChild(el("div",{class:"tx"},`${u.de} pede audiência urgente${u.assunto?`: ${u.assunto}`:""}.`));
-    const r=el("button",{type:"button",class:"small"},"Receber agora"); r.onclick=()=>{ u.lida=true; u.resposta="audiência"; save(); abrirConversa(chaveDe(u.de),u); };
+    const r=el("button",{type:"button",class:"small"},"Receber agora"); r.onclick=()=>{ if(abrirConversa(chaveDe(u.de),u)) renderCaixa(); };
     const l=el("button",{type:"button",class:"ghost small"},"Mais tarde"); l.onclick=()=>{ u.lida=true; save(); render(); };
     w.append(r,l); }
 }
@@ -1565,7 +1571,7 @@ function abrirCaixa(){
     d.appendChild(el("p",{class:"tx"},m.texto));
     if(m.resposta) d.appendChild(el("div",{class:"s"},m.resposta==="audiência"?"Respondida em audiência.":m.resposta==="arquivada"?"Arquivada sem resposta.":`Resposta: ${m.resposta}`));
     else if(!S.fim){ const bar=el("div",{class:"bar"});
-      const a=el("button",{type:"button",class:"small"},"Responder em audiência"); a.onclick=()=>{ m.lida=true; m.resposta="audiência"; save(); $("caixaDlg").close(); abrirConversa(chaveDe(m.de),m); };
+      const a=el("button",{type:"button",class:"small"},"Responder em audiência"); a.onclick=()=>{ $("caixaDlg").close(); abrirConversa(chaveDe(m.de),m); };
       const e=el("button",{type:"button",class:"ghost small"},"Responder por escrito"); e.onclick=()=>{ m.lida=true; save(); $("caixaDlg").close(); setTab("cena"); const t=$("input"); t.value=`Respondo por escrito ao ${m.tipo} de ${m.de}: `; t.focus(); t.dataset.resp=m.id; };
       const x=el("button",{type:"button",class:"ghost small"},"Arquivar"); x.onclick=()=>{ m.lida=true; m.resposta="arquivada"; save(); abrirCaixa(); renderCaixa(); };
       bar.append(a,e,x); d.appendChild(bar); }
@@ -1587,16 +1593,18 @@ function interlocutores(){
   return L;
 }
 function confessor(p){ return /confessor|penitenci|pregador/i.test(((p&&p.cargo)||"")+" "+((p&&p.nota)||"")); }
+/* devolve true quando a audiência de fato se abre (a carta respondida só é marcada nesse caso) */
 function abrirConversa(chave,mensagem){
+  if(!S||!sample) return false;
   if(chave&&chave.startsWith("x:")&&!interlocutores().some(i=>i.chave===chave)){ const nm=chave.slice(2); CV_EXTRA.push({chave,tipo:"outro",nome:nm,sub:"",ref:{nome:nm}}); }
-  if(!S||!sample) return;
-  if(S.fim){ $("sendStatus").textContent="O pontificado terminou: não há audiências."; return; }
+  if(S.fim){ $("sendStatus").textContent="O pontificado terminou: não há audiências."; return false; }
   const dlg=$("cvDlg");
   if(!chave){ const sel=$("cvQuem"); sel.innerHTML=""; interlocutores().forEach(x=>sel.appendChild(el("option",{value:x.chave},`${x.nome}${x.sub&&x.sub!==x.nome?`, ${x.sub}`:""}`)));
     const lst=$("cvMulti"); lst.innerHTML=""; interlocutores().forEach(x=>{ const lb=el("label"); const cb=el("input",{type:"checkbox",value:x.chave}); lb.append(cb,document.createTextNode(`${x.nome}${x.sub&&x.sub!==x.nome?`, ${x.sub}`:""}`)); lst.appendChild(lb); });
     $("cvPick").classList.remove("hidden"); $("cvForm").classList.add("hidden"); $("cvLog").innerHTML=""; $("cvNome").textContent="Nova audiência"; $("cvSub").textContent=`Hoje ainda cabem ${Math.max(0,AUD_DIA-audHoje())} audiências na agenda.`; $("cvAv").innerHTML=""; if(!dlg.open) dlg.showModal(); return; }
   if(audHoje()>=AUD_DIA){ $("cvPick").classList.add("hidden"); $("cvForm").classList.add("hidden"); $("cvLog").innerHTML=""; $("cvNome").textContent="Agenda cheia"; $("cvSub").textContent=`O Papa já concedeu ${AUD_DIA} audiências hoje. Siga a cena ou avance o tempo para receber mais gente.`; if(!dlg.open) dlg.showModal(); return; }
-  const x=interlocutores().find(i=>i.chave===chave); if(!x) return;
+  const x=interlocutores().find(i=>i.chave===chave); if(!x) return false;
+  if(mensagem){ mensagem.lida=true; mensagem.resposta="audiência"; }
   S.audiencias={data:S.data_iso,n:audHoje()+1}; save();
   CV={...x,linhas:[],sigilo:false,revelou:[],prometeu:[],encerrada:false,mensagem:mensagem||null,grupo:null};
   $("cvPick").classList.add("hidden"); $("cvForm").classList.remove("hidden");
@@ -1609,6 +1617,7 @@ function abrirConversa(chave,mensagem){
   if(ant.length) log.appendChild(el("p",{class:"note"},`Da última conversa: ${ant.map(l=>`${l.r==="p"?"o Papa":"ele"}: ${l.t.slice(0,90)}`).join(" | ")}`));
   $("cvInput").value=""; $("cvInput").disabled=false; $("cvSend").disabled=false; $("cvStatus").textContent="";
   if(!dlg.open) dlg.showModal(); $("cvInput").focus();
+  return true;
 }
 function fichaCurta(x){ const r=x.ref;
   if(x.tipo==="pessoa") return `${r.nome}, ${r.cargo}; facção ${r.faccao||"-"}; disposição REAL ${r.disposicao_real||r.disposicao}; hábito: ${r.habito||"?"}; recusa: ${r.recusa||"?"}; desejo: ${r.desejo||"?"}; frase: "${r.frase||"?"}"; conclusão sobre o Papa: ${r.conclusao||"ainda o avalia"}; plano: ${r.plano||"?"}${r.segredo?`; segredo (só ele sabe): ${r.segredo}`:""}`;
@@ -1679,27 +1688,30 @@ async function falarConversa(){
   if(!CV||CV.encerrada||!sample) return;
   const msg=$("cvInput").value.trim(); if(!msg) return;
   if(ctl){ $("cvStatus").textContent="Espere o narrador terminar a cena."; return; }
-  CV.sigilo=$("cvSigilo").checked;
-  $("cvInput").value=""; cvBolha("p",msg); CV.linhas.push({r:"p",t:msg});
+  /* a audiência pode ser encerrada enquanto a resposta chega: tudo aqui se refere a esta conversa, não à global */
+  const cv=CV;
+  cv.sigilo=$("cvSigilo").checked;
+  $("cvInput").value=""; cvBolha("p",msg); cv.linhas.push({r:"p",t:msg});
   const bolha=cvBolha("i","…"); $("cvSend").disabled=true; $("cvStatus").textContent="Ouvindo…";
-  const ctlCv=new AbortController(); CV.ctl=ctlCv;
+  const ctlCv=new AbortController(); cv.ctl=ctlCv;
   try{
     const prompt=cvPrompt(msg);
     const r=await llm(prompt.slice(0,PROMPT_LIMIT),{modelTier:"default",cache:false,signal:ctlCv.signal,onText:({text})=>{ bolha.textContent=text.split(SEP)[0].trim()||"…"; }});
+    if(CV!==cv) return;
     contarUso(r,bytes(prompt));
     const {narr,json}=splitOut(r.text||"");
-    if(CV.grupo){ bolha.parentNode.remove(); const falas=narr.split("\n").map(l=>l.match(/^\s*\**([^:*]{2,80}?)\**\s*:\s*(.+)$/)).filter(Boolean).slice(0,3);
-      const ns=CV.grupo.map(m=>m.nome);
-      (falas.length?falas:[[null,"",narr.trim()||"(silêncio)"]]).forEach(f=>{ const quem=ns.find(n=>_sa(n)===_sa(f[1]))||ns.find(n=>_sa(n).includes(_sa(f[1]))||_sa(f[1]).includes(_sa(n).split(" ").slice(-1)[0]))||f[1]||"Participante"; const t=f[2].trim(); const d=el("div",{class:"cv-msg cv-i"}); d.appendChild(el("b",{},quem)); const pp=el("p"); pp.textContent=t; d.appendChild(pp); $("cvLog").appendChild(d); CV.linhas.push({r:"i",quem,t}); });
+    if(cv.grupo){ bolha.parentNode.remove(); const falas=narr.split("\n").map(l=>l.match(/^\s*\**([^:*]{2,80}?)\**\s*:\s*(.+)$/)).filter(Boolean).slice(0,3);
+      const ns=cv.grupo.map(m=>m.nome);
+      (falas.length?falas:[[null,"",narr.trim()||"(silêncio)"]]).forEach(f=>{ const quem=!f[1]?"Participantes":(ns.find(n=>_sa(n)===_sa(f[1]))||ns.find(n=>_sa(n).includes(_sa(f[1]))||_sa(f[1]).includes(_sa(n).split(" ").slice(-1)[0]))||f[1]); const t=f[2].trim(); const d=el("div",{class:"cv-msg cv-i"}); d.appendChild(el("b",{},quem)); const pp=el("p"); pp.textContent=t; d.appendChild(pp); $("cvLog").appendChild(d); cv.linhas.push({r:"i",quem,t}); });
       if(json) aplicarReuniao(json); }
-    else { const fala=narr.trim()||"(silêncio)"; bolha.textContent=fala; CV.linhas.push({r:"i",t:fala});
-      if(json&&!CV.sigilo) aplicarConversa(json); }
-    const nP=CV.linhas.filter(l=>l.r==="p").length;
-    if((json&&json.encerrar===true)||nP>=AUD_FALAS){ CV.encerrada=true; $("cvInput").disabled=true; $("cvStatus").textContent=json&&json.encerrar?"A audiência foi encerrada pelo interlocutor.":"A audiência chegou ao fim do tempo previsto."; }
+    else { const fala=narr.trim()||"(silêncio)"; bolha.textContent=fala; cv.linhas.push({r:"i",t:fala});
+      if(json&&!cv.sigilo) aplicarConversa(json); }
+    const nP=cv.linhas.filter(l=>l.r==="p").length;
+    if((json&&json.encerrar===true)||nP>=AUD_FALAS){ cv.encerrada=true; $("cvInput").disabled=true; $("cvStatus").textContent=json&&json.encerrar?"A audiência foi encerrada pelo interlocutor.":"A audiência chegou ao fim do tempo previsto."; }
     else $("cvStatus").textContent="";
     save();
-  }catch(e){ bolha.textContent="(sem resposta)"; $("cvStatus").textContent=errCopy(e); CV.linhas.pop(); }
-  finally{ if(CV&&!CV.encerrada) $("cvSend").disabled=false; if(CV) CV.ctl=null; }
+  }catch(e){ if(CV!==cv) return; bolha.textContent="(sem resposta)"; $("cvStatus").textContent=errCopy(e); cv.linhas.pop(); }
+  finally{ cv.ctl=null; if(CV===cv&&!cv.encerrada) $("cvSend").disabled=false; }
 }
 function aplicarConversa(j){
   const x=CV;
@@ -1723,7 +1735,8 @@ function encerrarConversa(){
   if(!CV){ return; }
   if(CV.ctl) CV.ctl.abort();
   const x=CV; CV=null;
-  if(!x.linhas.length){ render(); return; }
+  /* fechada sem nenhuma fala: não gasta a vaga da agenda nem conta como resposta à carta */
+  if(!x.linhas.length){ if(S.audiencias&&S.audiencias.data===S.data_iso&&S.audiencias.n>0) S.audiencias.n--; if(x.mensagem&&x.mensagem.resposta==="audiência") x.mensagem.resposta=""; save(); render(); return; }
   conq(c=>{ c.audiencias=(c.audiencias||0)+1; });
   if(x.sigilo){ S.log.push({r:"s",t:"O Papa confessou-se. O que disse fica sob sigilo."}); if(!S.confissaoDia||S.confissaoDia!==S.data_iso){ S.vida=clamp(S.vida+1,0,10); S.confissaoDia=S.data_iso; } }
   else {
@@ -1873,7 +1886,8 @@ async function send(forcedPool){
   const anc=escolherAncora(msg); const evt=anc?null:escolherEvento(msg); S._ancoraTxt=anc?anc.t:(evt?evt.t:"");
   const P=buildTurn(msg,pool); delete S._ancoraTxt;
   S.uso.bytesUltimo=P.bytes; S.uso.nivelUltimo=P.nivel;
-  { const rid=$("input").dataset.resp; if(rid){ const m=S.caixa.find(x=>x.id===rid); if(m) m.resposta=msg.replace(/^Respondo por escrito[^:]*:\s*/i,"").slice(0,400)||msg.slice(0,400); delete $("input").dataset.resp; } }
+  const rid=$("input").dataset.resp;
+  if(rid){ const m=S.caixa.find(x=>x.id===rid); if(m) m.resposta=msg.replace(/^Respondo por escrito[^:]*:\s*/i,"").slice(0,400)||msg.slice(0,400); delete $("input").dataset.resp; }
   S.log.push({r:"p",t:msg}); $("input").value="";
   renderLog();
   const live=el("div",{class:"msg-n"}); $("log").appendChild(live);
@@ -1909,7 +1923,7 @@ async function send(forcedPool){
     const keep=e&&e.text?splitOut(e.text).narr.trim():"";
     S=JSON.parse(snap);
     if(keep){ S.log.push({r:"p",t:msg}); S.log.push({r:"n",t:keep}); S.log.push({r:"s",t:"Resposta incompleta; o estado não foi atualizado."}); save(); }
-    else $("input").value=msg;
+    else { $("input").value=msg; if(rid) $("input").dataset.resp=rid; }
     render();
   }finally{ setBusy(false); ctl=null; }
 }
@@ -1927,10 +1941,12 @@ ${narr.slice(0,7000)}`;
   try{ const r=await llmJson(p,{aux:true,modelTier:"quick",cache:false}); contarUso(null,bytes(p)); if(r&&typeof r==="object"){ delete r.acaso; delete r.fim; return r; } }catch(e){}
   return null;
 }
+/* a trava fica fora do estado (save() não a apaga no meio do pedido) e o resultado só vale para a partida que o pediu */
+let consolidando=false;
 async function consolidar(){
-  if(!sample||!S||S.consolidando) return;
+  if(!sample||!S||consolidando) return;
   const novos=S.resumos.slice(S.consolidadoAte||0); if(novos.length<10) return;
-  const ate=S.resumos.length; S.consolidando=true;
+  const alvo=S, ate=S.resumos.length; consolidando=true;
   const p=`Você mantém a memória de longo prazo de um jogo narrativo em que o usuário é o Papa. Reescreva a MEMÓRIA CONSOLIDADA incorporando os NOVOS FATOS, em no máximo 220 palavras, em português do Brasil, sem travessões: frases curtas com os fatos que não podem ser contraditos depois (decisões e atos do Papa, nomeações, promessas, rupturas, mortes, eventos graves), do mais importante ao menos. Não invente nada nem acrescente opinião.
 
 MEMÓRIA ATUAL
@@ -1940,15 +1956,17 @@ NOVOS FATOS
 ${novos.join("\n")}
 
 Responda só com o texto da memória.`;
-  try{ const r=await llm(p,{aux:true,modelTier:"quick",cache:false,maxTokens:700}); contarUso(r,bytes(p)); if(S){ S.consolidacao=String(r.text||"").trim().slice(0,2600); S.consolidadoAte=Math.min(ate,S.resumos.length); if(author) S.log.push({r:"s",t:"Memória da partida consolidada."}); save(); if(!$("game").classList.contains("hidden")) renderLog(); } }
+  try{ const r=await llm(p,{aux:true,modelTier:"quick",cache:false,maxTokens:700}); if(S===alvo){ contarUso(r,bytes(p)); S.consolidacao=String(r.text||"").trim().slice(0,2600); S.consolidadoAte=Math.min(ate,S.resumos.length); if(author) S.log.push({r:"s",t:"Memória da partida consolidada."}); save(); if(!$("game").classList.contains("hidden")) renderLog(); } }
   catch(e){ /* tenta de novo depois */ }
-  finally{ if(S) S.consolidando=false; }
+  finally{ consolidando=false; }
 }
 function setBusy(b){ $("btnSend").disabled=b; $("btnUndo").disabled=b||!PREV; $("btnStop").classList.toggle("hidden",!b); }
 
 /* /retificar (seção 8): refaz a última resposta só quando o narrador falou ou agiu pelo Papa */
 function retificar(){
-  if(!S||!PREV) return;
+  if(!S) return;
+  if(ctl){ $("sendStatus").textContent="Espere o narrador terminar a resposta antes de retificar."; return; }
+  if(!PREV){ $("sendStatus").textContent="Não há resposta a retificar: só a última, e só uma vez."; return; }
   const lastP=[...S.log].reverse().find(m=>m.r==="p"); if(!lastP) return;
   if(!confirm("Refazer a última resposta do narrador porque ele falou ou agiu pelo Papa? As decisões do Papa ficam; só a resposta é refeita.")) return;
   const pool=S.ultimoAcaso||null;
@@ -1964,7 +1982,7 @@ $("btnUndo").onclick=()=>{
 };
 $("btnReset").onclick=()=>{
   if(!confirm("Encerrar este pontificado e voltar à sessão zero? Tudo será apagado; gere o bloco de estado antes, se quiser guardar.")) return;
-  S=null; PREV=null; try{ localStorage.removeItem(KEY); localStorage.removeItem(KEY+"-prev"); }catch(e){} render(); window.scrollTo(0,0);
+  S=null; PREV=null; ZPRESET=null; try{ localStorage.removeItem(KEY); localStorage.removeItem(KEY+"-prev"); }catch(e){} render(); window.scrollTo(0,0);
 };
 
 /* ---------- /salvar ---------- */
@@ -1998,7 +2016,7 @@ S.anexos?`Anexos do jogador: ${S.anexos}`:"Anexos do jogador: nenhum.",
 `Fios narrativos: ${S.resumos.slice(-40).join(" ")}`,
 `NOTAS DO NARRADOR (verdades ocultas já fixadas; o jogador pode não lê-las): painel real: ${IND.map(([k,l])=>`${l} ${LV[S.painel_real[k]]}`).join("; ")}${Object.keys(S.diverg).length?`; divergências: ${Object.entries(S.diverg).map(([k,v])=>`${k}: ${v}`).join("; ")}`:""}. Efeitos pendentes: ${S.efeitos.join("; ")||"nenhum"}. Disposições reais, planos, memórias e segredos: ${S.personagens.filter(p=>p.disposicao_real!==p.disposicao||p.plano||p.segredo||p.memorias).map(p=>`${p.nome}: real ${p.disposicao_real}${p.plano?`; plano: ${p.plano}`:""}${p.memorias?`; memórias: ${p.memorias}`:""}${p.segredo?`; segredo: ${p.segredo}`:""}`).join(" | ")||"nenhum"}. Relações de bastidores: ${S.relacoes.map(r=>`${r.a} / ${r.b}: ${r.tipo} ${r.intensidade}${r.conhecida?"":" (oculta)"}`).join("; ")||"nenhuma"}. Rumores: caminhos e exatidão: ${S.rumores.map(r=>`${r.conteudo}: ${r.caminho||"?"}, ${r.exatidao||"?"}`).join(" | ")||"nenhum"}. Verdades fixadas: ${S.notas.join("; ")||"nenhuma"}.`
   ].join("\n\n");
-  $("saveDlg").querySelector("h2").textContent="Bloco de estado"; $("saveDlg").querySelector("p").textContent="Cole este texto no campo \"Continuar de um bloco salvo\" deste app, ou depois do documento seed numa conversa nova.";
+  $("saveDlg").querySelector("h2").textContent="Bloco de estado"; $("saveDlg").querySelector("p").textContent="Para retomar neste app, use Carregar > Carregar jogo externo no menu e cole este texto; ou cole-o depois do documento seed numa conversa nova.";
   $("saveTxt").value=txt; $("saveDlg").showModal();
 }
 $("btnSave").onclick=openSave;
@@ -2034,7 +2052,7 @@ Comece com a linha "BLOCO DE ESTADO" e use estas seções, em texto corrido e co
 17b. Atributos do Papa (Piedade, Doutrina, Pastoral, Política, Gestão, de 1 a 5), vida espiritual (0 a 10) e dificuldade, se existirem.
 17a. Compromissos do Papa: promessas, favores, dívidas de gratidão e ofensas, com quem.
 18. Notas do narrador: verdades ocultas já fixadas que a continuação precisa manter.`;
-$("btnExportPrompt").onclick=()=>{ $("saveDlg").querySelector("h2").textContent="Prompt para outra IA"; $("saveDlg").querySelector("p").textContent="Cole na conversa da outra IA. Depois traga o bloco gerado para o campo \"Continuar de um bloco salvo\"."; $("saveTxt").value=EXPORT_PROMPT; $("saveDlg").showModal(); };
+$("btnExportPrompt").onclick=()=>{ $("saveDlg").querySelector("h2").textContent="Prompt para outra IA"; $("saveDlg").querySelector("p").textContent="Cole na conversa da outra IA. Depois traga o bloco gerado para Carregar > Carregar jogo externo."; $("saveTxt").value=EXPORT_PROMPT; $("saveDlg").showModal(); };
 $("authorMode").checked=author;
 $("authorMode").onchange=()=>{ author=$("authorMode").checked; if(S) setTab(tab); try{ localStorage.setItem(KEY0+"-autor",author?"1":"0"); }catch(e){} };
 $("btnCloseDlg").onclick=()=>$("saveDlg").close();
@@ -2046,7 +2064,7 @@ function renderPapaFicha(){
   const w=$("papaFicha"); w.innerHTML="";
   const br=el("div",{class:"brasao-grande"}); br.innerHTML=brasaoSvg(S.papa,120); w.appendChild(br);
   ATTR.forEach(([k,l])=>{ const r=el("div",{class:"ind"}); const lb=el("div",{class:"icl"}); lb.appendChild(ic(AT_IC[k],18)); lb.appendChild(document.createTextNode(l)); r.appendChild(lb); const p=el("div",{class:"pips","aria-label":`${S.atributos[k]} de 5`}); for(let i=1;i<=5;i++){ const b=el("i"); if(i<=S.atributos[k]) b.style.background=cssVar("--gold"); p.appendChild(b); } r.appendChild(p); w.appendChild(r); });
-  const r=el("div",{class:"ind"}); const lv0=el("div",{class:"icl"}); lv0.appendChild(ic("vida",18)); lv0.appendChild(document.createTextNode(`Vida espiritual: ${S.vida}/10`)); r.appendChild(lv0); const bar=el("div",{class:"bar",style:"width:120px"}); const i=el("i"); i.style.width=(S.vida*10)+"%"; if(S.vida<=3) i.style.background=cssVar("--red"); bar.appendChild(i); r.appendChild(bar);
+  const r=el("div",{class:"ind"}); const lv0=el("div",{class:"icl"}); lv0.appendChild(ic("vida",18)); lv0.appendChild(document.createTextNode(`Vida espiritual: ${S.vida}/10`)); r.appendChild(lv0); const bar=el("div",{class:"meter"}); const i=el("i"); i.style.width=(S.vida*10)+"%"; if(S.vida<=3) i.style.background=cssVar("--red"); bar.appendChild(i); r.appendChild(bar);
   r.appendChild(el("div",{class:"lvl"},S.vida<=3?"Baixa: cansaço visível aos próximos; o confessor pede audiência.":S.vida>=8?"Alta: sustenta os atos de Piedade.":"Mede só o que o Papa declara fazer (oração, Missa, confissão, retiro) e a carga da agenda."));
   w.appendChild(r);
   w.appendChild(el("p",{class:"note mt"},`Dificuldade: ${S.dificuldade}.`));
@@ -2161,6 +2179,8 @@ async function iniciarSucessao(){
   N.dinastia=[...(old.dinastia||[]),{nome_papal:old.papa.nome_papal,nome:old.papa.nome,eleicao:old.eleicao,fim:old.fim,legado:old.legado||""}];
   N.consolidacao=`Pontificado anterior: ${old.papa.nome_papal}, de ${old.eleicao} a ${old.fim.data} (${old.fim.motivo}). ${old.legado?`Legado: ${old.legado.slice(0,1400)}`:old.consolidacao||""}`.slice(0,2600);
   N.needsWorld=false; N.needsBackground=false; N.dialogos={}; N.feitosOk=[];
+  /* o relógio do mundo continua de onde parou: o narrador vê a data, e o tempo não volta atrás */
+  N.data=old.data; N.data_iso=old.data_iso; N.eleicao=null;
   const prev=S; S=N; const estado=stateCompact({texto:(esc||"").toLowerCase()},{det:"mid"}); S=prev;
   const prompt=`${rulesFor("zero",{})}
 
@@ -2193,6 +2213,7 @@ Neste JSON envie: "data", "data_iso", "eleicao", "papa" com os dados finais do n
     if(!json&&narr.trim()) json=await repararEstado(narr);
     if(json&&json.personagens) json.personagens=json.personagens.filter(x=>x&&x.nome!==esc);
     applyState(json||{});
+    if(!S.eleicao) S.eleicao=S.data_iso;
     if(!S.hist.length) pushHist();
     const parts=narr.split(/\n-{3,}\s*\n/);
     if(parts.length>1){ S.log.push({r:"n",t:parts[0].trim()}); S.log.push({r:"n",t:parts.slice(1).join("\n\n").trim()}); } else S.log.push({r:"n",t:narr.trim()});
@@ -2206,7 +2227,7 @@ function renderMetas(){
   const w=$("metasList"); w.innerHTML="";
   if(!S.metas.length){ w.appendChild(el("p",{class:"note"},'Nenhuma meta definida. Para criar uma, escreva "/metas" seguido da meta (até três em curso).')); return; }
   S.metas.forEach(m=>{ const r=el("div",{class:"ind"}); const lb=el("div",{class:"icl"}); lb.appendChild(ic(m.estado==="cumprida"?"selo":m.estado==="fracassada"?"alerta":"tendencia",18)); lb.appendChild(document.createTextNode(m.texto)); r.appendChild(lb);
-    const bar=el("div",{class:"bar",style:"width:120px"}); const i=el("i"); i.style.width=m.progresso+"%"; if(m.estado==="fracassada"||m.estado==="abandonada") i.style.background=cssVar("--red"); bar.appendChild(i); r.appendChild(bar);
+    const bar=el("div",{class:"meter"}); const i=el("i"); i.style.width=m.progresso+"%"; if(m.estado==="fracassada"||m.estado==="abandonada") i.style.background=cssVar("--red"); bar.appendChild(i); r.appendChild(bar);
     r.appendChild(el("div",{class:"lvl"},`${m.estado}, ${m.progresso}%${m.nota?`. ${m.nota}`:""}`)); w.appendChild(r); });
 }
 function renderPainel(){
@@ -2271,7 +2292,7 @@ function renderMap(){
     return;
   }
   if(layer==="recepcao"){
-    if(selKey&&REGN[selKey]){ const par=AGG.find(a=>a[2].includes(selKey)); det.appendChild(el("h3",{},REGN[selKey])); det.appendChild(el("div",{},`Recepção pelos fiéis: ${LV[S.recepcao[selKey]]}. Conjunto ${par[1]}: ${LV[aggOf(S.recepcao,par[0])]}.`)); det.appendChild(el("div",{class:"note mt"},`Peso aproximado no total de católicos do mundo: ${(SUBW[selKey]/10).toLocaleString("pt-BR")}%.`)); }
+    if(selKey&&REGN[selKey]){ const par=AGG.find(a=>a[2].includes(selKey)); det.appendChild(el("h3",{},REGN[selKey])); det.appendChild(el("div",{},`Recepção pelos fiéis: ${LV[S.recepcao[selKey]]}. Conjunto ${par[1]}: ${LV[aggOf(S.recepcao,par[0])]}.`)); det.appendChild(el("div",{class:"note mt"},`Peso aproximado no total de católicos do mundo${historico(S.data_iso)?` em ${anoDe(S.data_iso)}`:""}: ${(pesosEra(S.data_iso)[selKey]/10).toLocaleString("pt-BR")}%.`)); }
     else det.appendChild(el("div",{class:"note"},"Toque numa região no mapa ou nas fichas."));
   } else if(selKey&&S.estados[selKey]){
     if(!STATES[selKey]) det.appendChild(el("div",{class:"note"},"Sem forma no mapa; registrado apenas aqui."));
@@ -2352,7 +2373,7 @@ function renderAgenda(){
 }
 let forceMode="faccoes", selNode=null;
 const short=n=>String(n).replace(/^(Card\.|Dom|Pe\.|Mons\.|Frei|Cel\.)\s+/,"").replace(/,.*$/,"").split(" ").slice(-1)[0];
-document.querySelectorAll("#forceLayers button").forEach(b=>b.onclick=()=>{ forceMode=b.dataset.f; renderForces(); });
+document.querySelectorAll("#forceLayers button").forEach(b=>b.onclick=()=>{ forceMode=b.dataset.f; if(window.d3) renderForces(); else renderFaccoesList(); });
 function renderForces(){
   document.querySelectorAll("#forceLayers button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.f===forceMode)));
   const svg=d3.select("#forceSvg"); svg.selectAll("*").remove();
@@ -2374,6 +2395,10 @@ function renderForces(){
   const g=svg.append("g").selectAll("g").data(pts).join("g").attr("transform",p=>`translate(${x(p.xv)},${y(p.yv)+p.dy})`);
   g.append("circle").attr("r",5).attr("fill",p=>lvColor(p.xv)).attr("stroke",cssVar("--ink")).attr("stroke-width",.6);
   g.append("text").attr("x",8).attr("y",4).style("font-size",forceMode==="faccoes"?"11px":"11.5px").text(p=>p.lab.length>28?p.lab.slice(0,27)+"…":p.lab);
+  renderFaccoesList();
+}
+function renderFaccoesList(){
+  document.querySelectorAll("#forceLayers button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.f===forceMode)));
   const fl=$("faccoesList"); fl.innerHTML="";
   if(forceMode==="faccoes") S.faccoes.forEach(f=>{ const d=el("div",{class:"item fac"}); d.appendChild(emblemaFaccao(f,34)); const t=el("div",{class:"t"},f.nome); t.appendChild(el("span",{class:"badge"},`força ${LV[f.forca]}`)); t.appendChild(el("span",{class:"badge "+(f.atitude>=4?"b-good":f.atitude<=2?"b-bad":"")},ATIT[f.atitude])); d.appendChild(t); if(f.pauta) d.appendChild(el("div",{class:"s"},f.pauta)); if(f.lideres) d.appendChild(el("div",{class:"s"},"Figuras: "+f.lideres)); fl.appendChild(d); });
 }
@@ -2411,7 +2436,7 @@ function renderNet(){
   shown.forEach(r=>{ const d=el("div"); d.appendChild(el("b",{},`${r.conhecida?"":"[oculta] "}${r.a} e ${r.b}: `)); d.appendChild(document.createTextNode(`${r.tipo}${r.intensidade>1?` (intensidade ${r.intensidade})`:""}${r.nota?`. ${r.nota}`:""}`)); list.appendChild(d); });
 }
 function renderElenco(){
-  if(window.d3){ renderForces(); renderNet(); }
+  if(window.d3){ renderForces(); renderNet(); } else renderFaccoesList();
   const w=$("elenco"); w.innerHTML="";
   const fora=S.personagens.filter(p=>p.ativo===false);
   S.personagens.filter(p=>p.ativo!==false).forEach(p=>{
@@ -2530,7 +2555,7 @@ function decisoesDe(){
     {t:"Proclamar um Ano Santo extraordinário",ok:y>=1300,m:y>=1300?"Possível a qualquer tempo, com motivo.":"Os anos santos começam em 1300.",a:"Proclamo um Ano Santo extraordinário, pelo seguinte motivo: "},
     {t:"Convocar um concílio ecumênico",ok:true,m:"Força e risco: concílios têm vontade própria.",a:"Decido convocar um concílio ecumênico. A pauta e o lugar serão: "},
     {t:"Convocar o Sínodo dos Bispos",ok:y>=1965,m:y>=1965?"Instituição permanente desde 1965.":"O Sínodo dos Bispos só existe a partir de 1965.",a:"Convoco uma assembleia do Sínodo dos Bispos sobre o tema: "},
-    {t:"Criar cardeais em consistório",ok:y>=1150&&d>=30,m:d<30?"Cedo demais: o Colégio espera ao menos um mês.":"Cada nome será lido como programa.",a:"Anuncio um consistório para criar novos cardeais. Os nomes que tenho em mente são: "},
+    {t:"Criar cardeais em consistório",ok:y>=1150&&d>=30,m:y<1150?"O Colégio dos Cardeais só se organiza como corpo, com consistórios para criá-los, no século XII.":d<30?"Cedo demais: o Colégio espera ao menos um mês.":"Cada nome será lido como programa.",a:"Anuncio um consistório para criar novos cardeais. Os nomes que tenho em mente são: "},
     {t:"Canonizar",ok:y>=1234,m:y>=1234?"Exige causa concluída e milagre aprovado.":"Antes de 1234, o culto dos santos ainda não é reservado ao Papa.",a:"Quero canonizar o beato cuja causa esteja mais adiantada, ou: "},
     {t:"Proclamar um dogma",ok:true,m:y>=1870?"Ex cathedra, nas condições de Pastor Aeternus; ouvir antes o episcopado.":"Por bula solene, depois de consultar teólogos e bispos.",a:"Peço os estudos preparatórios para definir solenemente o seguinte ponto de fé: "},
     {t:"Escrever uma encíclica",ok:y>=1740,m:y>=1740?"Ensino a toda a Igreja; trâmite de meses.":"A forma moderna da encíclica começa em 1740.",a:"Encomendo a redação de uma encíclica sobre: "},
@@ -2625,8 +2650,15 @@ function avisoIc(t){ if(/reconstru/i.test(t)) return ["reparo",""]; if(/Bastidor
   if(/^Feito alcançado/.test(t)) return ["autoridade","ok"];
   if(/agravou/.test(t)) return ["desce","bad"]; if(/Mundo|Recepção|Estado|Ecumen/.test(t)) return ["mundo",""]; return ["info",""]; }
 /* cor litúrgica do dia, pelo cálculo do calendário */
-function corLiturgica(iso){ if(!iso) return null; const d=litDay(iso);
+function corLiturgica(iso){ if(!iso) return null; const d=litDay(iso).replace(/ \(calendário juliano\)$/,"");
   if(/III Domingo do Advento|IV Domingo da Quaresma/.test(d)) return ["rosa","#C77B9B"];
+  /* "Festa (tempo)": a cor é a da celebração, não a do tempo (São José na Quaresma, Imaculada no Advento) */
+  const fx=d.match(/^(.*?) \((.*)\)$/);
+  if(fx){ const c=fx[1];
+    if(/Fiéis Defuntos/.test(c)) return ["roxo","#6A3D8F"];
+    if(/Sexta-feira da Paixão|Domingo de Ramos|Pentecostes|Mártir|mártir|Apóstolo|Exaltação da Santa Cruz|Estêvão|São Pedro e São Paulo/.test(c)) return ["vermelho","#B3261E"];
+    if(!/semana|Domingo depois|Tempo do Natal/.test(c)) return ["branco","#C9A227"]; }
+  if(/^Sábado Santo/.test(d)) return ["roxo","#6A3D8F"];
   if(/^Sexta-feira Santa/.test(d)) return ["preto","#222222"];
   if(/Septuagésima|Sexagésima|Quinquagésima|Domingo da Paixão|Semana da Paixão/.test(d)) return ["roxo","#6A3D8F"];
   if(/depois de Pentecostes|depois da Epifania/.test(d)&&!/Trindade|Corpus|Cristo Rei|Santo|São|Nossa Senhora|Senhor/.test(d)) return ["verde","#2E7D4F"];
@@ -2721,9 +2753,9 @@ const PRESETS=[
 ];
 function applyPreset(z){
   if($("z-tipoelenco")) $("z-tipoelenco").value=z.elenco||"fictício";
-  const set=(id,v)=>{ const e=$(id); if(!e||v==null) return; if(e.tagName==="SELECT"){ if(String(v).startsWith("__outro:")){ e.value="__outro"; e.dispatchEvent(new Event("change")); $(id+"-outro").value=String(v).slice(8); } else { const o=[...e.options].find(x=>x.value===v||x.text===v); if(o) e.value=o.value; else { e.value="__outro"; e.dispatchEvent(new Event("change")); $(id+"-outro").value=String(v); } e.dispatchEvent(new Event("change")); } } else e.value=v; };
+  const set=(id,v)=>{ const e=$(id); if(!e) return; if(v==null||v===""){ if(e.tagName==="SELECT"){ e.value=e.options[0].value; e.dispatchEvent(new Event("change")); } else e.value=""; return; } if(e.tagName==="SELECT"){ if(String(v).startsWith("__outro:")){ e.value="__outro"; e.dispatchEvent(new Event("change")); $(id+"-outro").value=String(v).slice(8); } else { const o=[...e.options].find(x=>x.value===v||x.text===v); if(o) e.value=o.value; else { e.value="__outro"; e.dispatchEvent(new Event("change")); $(id+"-outro").value=String(v); } e.dispatchEvent(new Event("change")); } } else e.value=v; };
   ["z-escr","z-ord","z-brasao","z-vestes","z-sec","z-secorig","z-elenco","z-derrota"].forEach(id=>{ if($(id)) $(id).value=""; });
-  set("z-data",z.data||(()=>{ const d=new Date(); d.setDate(d.getDate()-1); return d.toISOString().slice(0,10); })());
+  set("z-data",z.data||hojeISO(-1));
   set("z-nome",z.nome); set("z-nac",z.nac); set("z-idade",z.idade); set("z-saude",z.saude); set("z-form",z.form); set("z-cargos",z.cargos); set("z-linguas",z.linguas);
   set("z-papal",z.papal); set("z-lema",z.lema); set("z-mora",z.mora); set("z-rito",z.rito); set("z-real",z.real); set("z-abert",z.abert);
   $("z-dific").value=z.dific||"padrão";
@@ -2743,10 +2775,11 @@ $("quickGen").onclick=async()=>{
   if(!sample){ $("quickStatus").textContent="Nenhuma IA conectada."; return; }
   const pedido=$("quickPedido").value.trim().slice(0,600);
   $("quickGen").disabled=true; startTimer($("quickStatus"),"O narrador imagina três Papas…");
-  const prompt=`Você prepara o modo rápido de um jogo em que o usuário é o Papa (regra de pessoas reais: nomes fictícios; nunca uma pessoa viva real). ${pedido?`Proponha três Papas prontos segundo este pedido do jogador, que prevalece sobre as sugestões seguintes: "${pedido}". Dentro dele, faça-os distintos entre si.`:`Proponha três Papas prontos, bem distintos entre si: épocas diferentes (ao menos um na data atual, ${new Date().toISOString().slice(0,10)}, e ao menos um num conclave histórico real, no lugar do eleito), continentes, trajetórias e temperamentos diferentes.`} Se usar um conclave histórico real, a data é a da eleição real e o Papa ocupa o lugar do eleito. Português do Brasil, sem travessões. Responda SOMENTE com JSON:
+  const prompt=`Você prepara o modo rápido de um jogo em que o usuário é o Papa (regra de pessoas reais: nomes fictícios; nunca uma pessoa viva real). ${pedido?`Proponha três Papas prontos segundo este pedido do jogador, que prevalece sobre as sugestões seguintes: "${pedido}". Dentro dele, faça-os distintos entre si.`:`Proponha três Papas prontos, bem distintos entre si: épocas diferentes (ao menos um na data atual, ${hojeISO()}, e ao menos um num conclave histórico real, no lugar do eleito), continentes, trajetórias e temperamentos diferentes.`} Se usar um conclave histórico real, a data é a da eleição real e o Papa ocupa o lugar do eleito. Português do Brasil, sem travessões. Responda SOMENTE com JSON:
 {"papas":[{"titulo":"poucas palavras","resumo":"duas frases com a situação e a tensão inicial","z":{"data":"AAAA-MM-DD (dia da eleição; vazio para ontem)","nome":"nome de batismo","nac":"nacionalidade","idade":"n","saude":"...","form":"formação","cargos":"cargo antes do conclave","linguas":"...","papal":"nome papal","lema":"lema em latim","mora":"residência","rito":"forma e rito habitual","at":{"piedade":1-5,"doutrina":1-5,"pastoral":1-5,"politica":1-5,"gestao":1-5}}}]} Os cinco atributos de cada Papa somam 15, coerentes com a trajetória.`;
   try{ const r=await llmJson(prompt,{aux:true,modelTier:"quick",cache:false}); stopTimer(); $("quickStatus").textContent="";
-    const ps=(r.papas||[]).slice(0,3).map(p=>({titulo:String(p.titulo||"Papa"),resumo:String(p.resumo||""),z:{...p.z,real:"Padrão (todas as regras de realismo)",abert:"Manhã seguinte à eleição"}}));
+    const atOk=at=>{ if(!at||typeof at!=="object") return false; const v=ATTR.map(([k])=>+at[k]); return v.every(x=>Number.isInteger(x)&&x>=1&&x<=5)&&v.reduce((a,b)=>a+b,0)===15; };
+    const ps=(r.papas||[]).slice(0,3).filter(p=>p&&typeof p==="object").map(p=>{ const z={...(p.z&&typeof p.z==="object"?p.z:{}),real:"Padrão (todas as regras de realismo)",abert:"Manhã seguinte à eleição"}; if(!/^\d{4}-\d{2}-\d{2}$/.test(String(z.data||""))) z.data=""; if(!atOk(z.at)) delete z.at; return {titulo:String(p.titulo||"Papa"),resumo:String(p.resumo||""),z}; });
     if(ps.length) renderQuick(ps); else $("quickStatus").textContent="A resposta veio vazia. Tente de novo.";
   }catch(e){ stopTimer(); $("quickStatus").textContent=errCopy(e); }
   finally{ $("quickGen").disabled=false; }
@@ -2762,8 +2795,8 @@ function joinP(p){ return typeof p==="string"?p:((p.fixo?p.fixo+"\n\n":"")+p.var
 /* ponto único de chamada: no claude.ai junta tudo num texto; com chave própria separa prefixo fixo (cacheável) e parte variável */
 async function llm(p,opts={}){ const o={...opts}; delete o.aux; delete o.maxTokens; if(aiSource==="claude"){ const r=await sample(joinP(p),o); return {...r,usage:null}; } return sample(p,opts); }
 async function llmJson(p,opts={}){ const o={...opts}; delete o.aux; delete o.maxTokens; if(aiSource==="claude") return sample.json(joinP(p),o); return sample.json(p,opts); }
-const PRECOS={"claude-sonnet-5":[2,10,0.2,4],"claude-haiku-4-5":[1,5,0.1,2],"claude-opus-5-5":[4,20,0.2,8],"claude-sonnet-4-6":[3,15,0.3,6]};
-function precoDe(modelo){ const k=Object.keys(PRECOS).find(x=>String(modelo||"").startsWith(x)); return k?PRECOS[k]:null; }
+const PRECOS={"claude-sonnet-5-5":[2,10,0.2,4],"claude-sonnet-5":[2,10,0.2,4],"claude-haiku-4-5":[1,5,0.1,2],"claude-opus-5-5":[4,20,0.2,8],"claude-opus-5":[5,25,0.5,10],"claude-fable-5-1":[10,50,0.25,20],"claude-sonnet-4-6":[3,15,0.3,6]};
+function precoDe(modelo){ const m=String(modelo||""); const k=Object.keys(PRECOS).filter(x=>m.startsWith(x)).sort((a,b)=>b.length-a.length)[0]; return k?PRECOS[k]:null; }
 function contarUso(res,b){
   if(!S) return; const U=S.uso; U.chamadas++; U.bytesTotal+=b||0;
   const u=res&&res.usage; if(!u) return;
@@ -2917,7 +2950,7 @@ function show(v){
   window.scrollTo(0,0);
 }
 function renderMenuTopo(){
-  const hoje=new Date().toISOString().slice(0,10), cl=corLiturgica(hoje);
+  const hoje=hojeISO(), cl=corLiturgica(hoje);
   if(!S) document.documentElement.style.setProperty("--lit",cl?(cl[0]==="branco"?"#B8952B":cl[1]):"var(--gold)");
   const h=$("homeHoje"); h.innerHTML=""; if(cl){ const dot=el("i",{class:"litdot"}); dot.style.background=cl[1]; h.appendChild(dot); }
   h.appendChild(document.createTextNode(`Hoje: ${litDay(hoje)}`));
@@ -2938,7 +2971,7 @@ function renderHome(){
     const bar=el("div",{class:"bar"});
     const abrir=el("button",{type:"button",class:"small"},P?"Abrir":"Começar aqui"); abrir.onclick=()=>{ usarEspaco(n); show("papado"); };
     bar.appendChild(abrir);
-    if(P){ const del=el("button",{type:"button",class:"ghost small"},"Apagar"); del.onclick=()=>{ if(!confirm(`Apagar a partida do espaço ${n} (${P.papa.nome_papal||"pontificado"})? Não há como desfazer.`)) return; try{ localStorage.removeItem(keyDo(n)); localStorage.removeItem(keyDo(n)+"-prev"); localStorage.removeItem(keyDo(n)+"-anterior"); }catch(e){} if(n===SLOT){ S=null; PREV=null; } renderHome(); }; bar.appendChild(del); }
+    if(P){ const del=el("button",{type:"button",class:"ghost small"},"Apagar"); del.onclick=()=>{ if(!confirm(`Apagar a partida do espaço ${n} (${P.papa.nome_papal||"pontificado"})? Não há como desfazer.`)) return; try{ localStorage.removeItem(keyDo(n)); localStorage.removeItem(keyDo(n)+"-prev"); localStorage.removeItem(keyDo(n)+"-anterior"); }catch(e){} if(n===SLOT){ S=null; PREV=null; } renderHome(); renderMenuTopo(); }; bar.appendChild(del); }
     card.appendChild(bar); list.appendChild(card);
   }
   $("continueWrap").classList.remove("hidden");
@@ -2951,7 +2984,7 @@ $("mNovo").onclick=()=>menu("subNovo");
 $("mCarregar").onclick=()=>menu("subCarregar");
 $("mContinuar").onclick=()=>show("papado");
 $("mConq").onclick=()=>{ renderConquistas(); menu("subConq"); };
-$("goPapado").onclick=()=>{ if(!espacoParaNovo()) return; show("papado"); };
+$("goPapado").onclick=()=>{ if(!espacoParaNovo()) return; ZPRESET=null; show("papado"); };
 $("goQuick").onclick=()=>show("quickScreen");
 $("goImport").onclick=()=>show("importScreen");
 $("goSettings").onclick=()=>show("settings");
