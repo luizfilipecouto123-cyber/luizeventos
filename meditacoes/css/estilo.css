@@ -1,0 +1,453 @@
+/* Layout: uma única coluna, como a página de um missal; a fita marcadora
+   pende do alto na cor litúrgica do dia. Rubricas em vermelho, texto em
+   preto de impressão. */
+:root {
+  --papel: #fdfcf9;
+  --papel-2: #f5f2ea;
+  --tinta: #1f1b17;
+  --tinta-suave: #5c544a;
+  --rubrica: #a3201b;
+  --ouro: #9a7a3c;
+  --fio: #ddd5c6;
+
+  --lit-w: #efe6cf;
+  --lit-w-borda: #b99a55;
+  --lit-r: #9e1b1b;
+  --lit-v: #56306b;
+  --lit-g: #2f5b3b;
+  --lit-p: #c27c93;
+  --lit-b: #1c1a19;
+
+  --f-titulo: "IM Fell English SC", "EB Garamond", Garamond, "Times New Roman", serif;
+  --f-rubrica: "IM Fell English", "EB Garamond", Garamond, "Times New Roman", serif;
+  --f-texto: "EB Garamond", Garamond, "Times New Roman", serif;
+
+  --medida: 40rem;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --papel: #14120f;
+    --papel-2: #1d1a16;
+    --tinta: #ebe4d6;
+    --tinta-suave: #a99f90;
+    --rubrica: #e2705f;
+    --ouro: #cfae6e;
+    --fio: #3a342c;
+    --lit-w: #e9dfc6;
+    --lit-w-borda: #cfae6e;
+    --lit-r: #b52a24;
+    --lit-v: #7a4a92;
+    --lit-g: #3f7a50;
+    --lit-p: #cf8aa1;
+    --lit-b: #3a3634;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --papel: #14120f;
+  --papel-2: #1d1a16;
+  --tinta: #ebe4d6;
+  --tinta-suave: #a99f90;
+  --rubrica: #e2705f;
+  --ouro: #cfae6e;
+  --fio: #3a342c;
+  --lit-w: #e9dfc6;
+  --lit-w-borda: #cfae6e;
+  --lit-r: #b52a24;
+  --lit-v: #7a4a92;
+  --lit-g: #3f7a50;
+  --lit-p: #cf8aa1;
+  --lit-b: #3a3634;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: var(--f-texto);
+  font-size: 1.1875rem;
+  line-height: 1.6;
+  padding-inline: 16px;
+  padding-block: 0 4rem;
+  font-variant-ligatures: common-ligatures;
+}
+
+.pagina {
+  position: relative;
+  max-width: var(--medida);
+  margin-inline: auto;
+}
+
+/* ── Fita marcadora ── */
+.fita {
+  position: absolute;
+  top: 0;
+  right: clamp(0px, 4vw, 1.5rem);
+  width: 1.1rem;
+  height: 7.5rem;
+  background: var(--lit, var(--lit-g));
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 86%, 0 100%);
+  box-shadow: inset -3px 0 0 rgba(0, 0, 0, 0.12);
+  transition: background-color 0.4s ease;
+}
+.fita[data-cor="w"] {
+  background: linear-gradient(90deg, var(--lit-w-borda) 0 2px, var(--lit-w) 2px calc(100% - 2px), var(--lit-w-borda) calc(100% - 2px));
+}
+
+/* ── Frontispício ── */
+.frontispicio {
+  text-align: center;
+  padding-block: 3.25rem 1.5rem;
+  padding-inline: 2rem;
+}
+.cruz {
+  display: block;
+  font-family: var(--f-texto);
+  color: var(--rubrica);
+  font-size: 1.6rem;
+  line-height: 1;
+  margin-bottom: 0.9rem;
+}
+.frontispicio .sobre {
+  margin: 0;
+  font-family: var(--f-rubrica);
+  font-style: italic;
+  color: var(--rubrica);
+  font-size: 1.05rem;
+}
+.frontispicio h1 {
+  margin: 0.15rem 0 0.4rem;
+  font-family: var(--f-titulo);
+  font-weight: 400;
+  font-size: clamp(1.9rem, 6.2vw, 2.75rem);
+  line-height: 1.12;
+  letter-spacing: 0.01em;
+  text-wrap: balance;
+}
+.frontispicio .subtitulo {
+  margin: 0;
+  color: var(--tinta-suave);
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  font-variant-caps: all-small-caps;
+  text-wrap: balance;
+}
+
+/* ── Navegação entre os dias ── */
+.navegacao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 0.75rem;
+  margin-block: 0.5rem 2rem;
+}
+.navegacao button,
+.navegacao input {
+  font: inherit;
+  font-size: 0.98rem;
+  color: var(--tinta);
+  background: transparent;
+  border: 1px solid var(--fio);
+  border-radius: 2px;
+  padding: 0.3rem 0.8rem;
+  min-height: 2.5rem;
+  cursor: pointer;
+}
+.navegacao button:hover { border-color: var(--ouro); }
+.navegacao button[aria-current="date"] { border-color: var(--rubrica); color: var(--rubrica); }
+.navegacao input { cursor: text; font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2px solid var(--rubrica); outline-offset: 2px; }
+
+/* ── O dia litúrgico ── */
+.dia {
+  text-align: center;
+  padding-block: 1.75rem;
+  border-block: 1px solid var(--fio);
+}
+.dia .data {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  font-variant-caps: all-small-caps;
+  color: var(--tinta-suave);
+}
+.dia h2 {
+  margin: 0.35rem 0 0.6rem;
+  font-family: var(--f-titulo);
+  font-weight: 400;
+  font-size: clamp(1.55rem, 5vw, 2.1rem);
+  line-height: 1.18;
+  text-wrap: balance;
+}
+.dia .grau {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-family: var(--f-rubrica);
+  font-style: italic;
+  color: var(--rubrica);
+}
+.amostra {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 50%;
+  background: var(--lit, var(--lit-g));
+  border: 1px solid var(--fio);
+}
+.amostra[data-cor="w"] { background: var(--lit-w); border-color: var(--lit-w-borda); }
+.dia .tempo {
+  margin: 0.6rem 0 0;
+  font-size: 1.02rem;
+  color: var(--tinta-suave);
+  text-wrap: balance;
+}
+.dia .comemoracoes {
+  margin: 0.45rem auto 0;
+  max-width: 32rem;
+  font-size: 0.98rem;
+  color: var(--tinta-suave);
+  text-wrap: balance;
+}
+.dia .comemoracoes em { color: var(--rubrica); font-family: var(--f-rubrica); }
+
+/* ── Sumário do método ── */
+.sumario {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.25rem 1.25rem;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 1rem;
+}
+.sumario a { color: var(--tinta); text-decoration: none; border-bottom: 1px solid transparent; }
+.sumario a:hover { border-bottom-color: var(--rubrica); }
+.sumario b { color: var(--rubrica); font-weight: 400; margin-right: 0.3rem; }
+
+/* ── Partes da oração ── */
+.parte { padding-top: 2.75rem; }
+.parte + .parte::before {
+  content: "✠";
+  display: block;
+  text-align: center;
+  color: var(--rubrica);
+  font-size: 1.1rem;
+  margin-bottom: 2.25rem;
+}
+.parte > h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin: 0 0 1rem;
+  font-family: var(--f-titulo);
+  font-weight: 400;
+  font-size: clamp(1.45rem, 4.4vw, 1.8rem);
+  line-height: 1.2;
+}
+.parte > h2 .num { color: var(--rubrica); }
+
+.rubrica {
+  font-family: var(--f-rubrica);
+  font-style: italic;
+  color: var(--rubrica);
+  font-size: 1.05rem;
+  line-height: 1.5;
+}
+
+.parte p { margin: 0 0 0.9rem; }
+.justificado { text-align: justify; hyphens: auto; -webkit-hyphens: auto; }
+
+.ato { margin-block: 1.4rem; }
+.ato h3 {
+  margin: 0 0 0.35rem;
+  font-family: var(--f-texto);
+  font-weight: 500;
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  font-variant-caps: all-small-caps;
+  color: var(--tinta-suave);
+}
+.oracao {
+  margin: 0;
+  font-size: 1.22rem;
+  line-height: 1.55;
+}
+.oracao::first-letter { color: var(--rubrica); }
+
+details.oracoes {
+  margin-block: 1rem 1.25rem;
+  border-left: 2px solid var(--fio);
+  padding-left: 1rem;
+}
+details.oracoes summary {
+  cursor: pointer;
+  color: var(--tinta-suave);
+  font-size: 1rem;
+  list-style-position: inside;
+}
+details.oracoes h4 {
+  margin: 1rem 0 0.25rem;
+  font-weight: 500;
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+  font-variant-caps: all-small-caps;
+  color: var(--rubrica);
+}
+details.oracoes p { margin: 0 0 0.4rem; }
+details.oracoes .latim { font-style: italic; color: var(--tinta-suave); font-size: 1.02rem; }
+
+/* ── A meditação ── */
+.abas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 1.25rem;
+}
+.abas button {
+  font: inherit;
+  font-size: 0.98rem;
+  color: var(--tinta-suave);
+  background: transparent;
+  border: 1px solid var(--fio);
+  border-radius: 2px;
+  padding: 0.25rem 0.8rem;
+  cursor: pointer;
+}
+.abas button[aria-selected="true"] { color: var(--rubrica); border-color: var(--rubrica); }
+
+.meditacao h3 {
+  margin: 0 0 1rem;
+  font-family: var(--f-titulo);
+  font-weight: 400;
+  font-size: 1.4rem;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+.meditacao h4 {
+  margin: 1.6rem 0 0.5rem;
+  font-family: var(--f-rubrica);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.12rem;
+  color: var(--rubrica);
+}
+.meditacao .corpo > p:first-of-type::first-letter {
+  float: left;
+  font-family: var(--f-titulo);
+  color: var(--rubrica);
+  font-size: 3.4em;
+  line-height: 0.82;
+  padding: 0.08em 0.1em 0 0;
+}
+.meditacao .fonte { font-size: 0.95rem; color: var(--tinta-suave); margin-top: 1.5rem; }
+.meditacao a, .rodape a, .aviso a { color: var(--rubrica); }
+
+.aviso {
+  background: var(--papel-2);
+  border: 1px solid var(--fio);
+  padding: 1.1rem 1.25rem;
+  border-radius: 2px;
+}
+.aviso p { margin: 0 0 0.6rem; }
+.aviso p:last-child { margin-bottom: 0; }
+.aviso .procure {
+  font-family: var(--f-rubrica);
+  font-style: italic;
+  color: var(--tinta);
+  font-size: 1.12rem;
+}
+
+/* ── Afetos e conclusão ── */
+.lista-afetos {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0 1.25rem;
+  padding: 0;
+  list-style: none;
+}
+.lista-afetos li { display: grid; gap: 0.1rem; }
+.lista-afetos b {
+  font-weight: 500;
+  font-size: 0.98rem;
+  letter-spacing: 0.06em;
+  font-variant-caps: all-small-caps;
+  color: var(--tinta-suave);
+}
+.lista-afetos span { font-size: 1.12rem; }
+
+.recomendacoes {
+  margin: 0.5rem 0 1rem;
+  padding-left: 1.4rem;
+}
+.recomendacoes li { margin-bottom: 0.15rem; }
+
+.proposito label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-family: var(--f-rubrica);
+  font-style: italic;
+  color: var(--rubrica);
+}
+.proposito textarea {
+  width: 100%;
+  min-height: 5.5rem;
+  font: inherit;
+  font-size: 1.08rem;
+  color: var(--tinta);
+  background: var(--papel-2);
+  border: 1px solid var(--fio);
+  border-radius: 2px;
+  padding: 0.6rem 0.75rem;
+  resize: vertical;
+}
+.proposito .dica { font-size: 0.9rem; color: var(--tinta-suave); margin-top: 0.35rem; }
+
+.epigrafe {
+  margin: 2.5rem 0 0;
+  text-align: center;
+  font-family: var(--f-rubrica);
+  font-style: italic;
+  font-size: 1.15rem;
+}
+.epigrafe cite {
+  display: block;
+  margin-top: 0.3rem;
+  font-style: normal;
+  font-family: var(--f-texto);
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+  font-variant-caps: all-small-caps;
+  color: var(--tinta-suave);
+}
+
+.rodape {
+  margin-top: 3rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--fio);
+  font-size: 0.92rem;
+  color: var(--tinta-suave);
+  text-align: center;
+}
+.rodape p { margin: 0 0 0.4rem; }
+
+@media (max-width: 30rem) {
+  body { font-size: 1.125rem; }
+  .navegacao input { order: 4; flex-basis: 100%; max-width: 15rem; }
+  .frontispicio { padding-inline: 1.5rem; }
+  .fita { height: 5.5rem; width: 0.9rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fita { transition: none; }
+}

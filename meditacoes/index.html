@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meditações de Santo Afonso</title>
+<meta name="description" content="A meditação do dia segundo o Calendário Romano de 1962, com a preparação e a conclusão pelo método de Santo Afonso Maria de Ligório.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap">
+<link rel="stylesheet" href="css/estilo.css">
+</head>
+<body>
+<div class="pagina" id="pagina">
+  <div class="fita" id="fita" aria-hidden="true"></div>
+
+  <header class="frontispicio">
+    <span class="cruz" aria-hidden="true">✠</span>
+    <p class="sobre">Oração mental segundo o método de</p>
+    <h1>Santo Afonso Maria de Ligório</h1>
+    <p class="subtitulo">Meditação do dia · Calendário Romano de 1962</p>
+  </header>
+
+  <nav class="navegacao" aria-label="Escolher o dia">
+    <button type="button" id="btn-anterior" aria-label="Dia anterior">‹ Anterior</button>
+    <button type="button" id="btn-hoje">Hoje</button>
+    <input type="date" id="campo-data" aria-label="Escolher uma data">
+    <button type="button" id="btn-seguinte" aria-label="Dia seguinte">Seguinte ›</button>
+  </nav>
+
+  <section class="dia" aria-live="polite">
+    <p class="data" id="dia-data">&nbsp;</p>
+    <h2 id="dia-celebracao">&nbsp;</h2>
+    <p class="grau"><span class="amostra" id="dia-amostra"></span><span id="dia-grau">&nbsp;</span></p>
+    <p class="tempo" id="dia-tempo"></p>
+    <p class="comemoracoes" id="dia-comemoracoes" hidden></p>
+    <ol class="sumario" aria-label="Partes da oração">
+      <li><a href="#preparacao"><b>I</b>Preparação</a></li>
+      <li><a href="#meditacao"><b>II</b>Meditação</a></li>
+      <li><a href="#afetos"><b>III</b>Afetos e resoluções</a></li>
+      <li><a href="#conclusao"><b>IV</b>Conclusão</a></li>
+    </ol>
+  </section>
+
+  <main>
+    <section class="parte" id="preparacao" aria-labelledby="t-preparacao">
+      <h2 id="t-preparacao"><span class="num">I.</span> Preparação</h2>
+      <p class="rubrica">A oração mental tem três partes: a preparação, a meditação e a conclusão. Na preparação fazem-se três atos: de fé na presença de Deus, de humildade com um breve ato de contrição, e de pedido de luz.</p>
+
+      <div class="ato">
+        <h3>1. Ato de fé na presença de Deus e de adoração</h3>
+        <p class="oracao">Meu Deus, creio que estais aqui presente, e vos adoro com todo o afeto da minha alma.</p>
+      </div>
+
+      <div class="ato">
+        <h3>2. Ato de humildade e de contrição</h3>
+        <p class="oracao">Senhor, pelos meus pecados eu mereceria estar agora no inferno. Ó Bondade infinita, arrependo-me de vos ter ofendido.</p>
+      </div>
+
+      <div class="ato">
+        <h3>3. Pedido de luz</h3>
+        <p class="oracao">Eterno Pai, por amor de Jesus e de Maria, dai-me luz nesta oração, para que dela tire proveito.</p>
+      </div>
+
+      <p class="rubrica">Reza-se em seguida uma Ave-Maria à Santíssima Virgem, para que nos alcance a luz, e um Glória ao Pai a São José, ao Anjo da Guarda e ao santo padroeiro, com o mesmo fim. Façam-se estes atos com atenção, mas brevemente, e passe-se logo à meditação.</p>
+
+      <details class="oracoes">
+        <summary>Ave-Maria e Glória ao Pai</summary>
+        <h4>Ave-Maria</h4>
+        <p>Ave Maria, cheia de graça, o Senhor é convosco; bendita sois vós entre as mulheres, e bendito é o fruto do vosso ventre, Jesus. Santa Maria, Mãe de Deus, rogai por nós, pecadores, agora e na hora de nossa morte. Amém.</p>
+        <p class="latim" lang="la">Ave María, grátia plena, Dóminus tecum; benedícta tu in muliéribus, et benedíctus fructus ventris tui, Iesus. Sancta María, Mater Dei, ora pro nobis peccatóribus, nunc et in hora mortis nostræ. Amen.</p>
+        <h4>Glória ao Pai</h4>
+        <p>Glória ao Pai, e ao Filho, e ao Espírito Santo. Assim como era no princípio, agora e sempre, e por todos os séculos dos séculos. Amém.</p>
+        <p class="latim" lang="la">Glória Patri, et Fílio, et Spirítui Sancto. Sicut erat in princípio, et nunc, et semper, et in sǽcula sæculórum. Amen.</p>
+      </details>
+    </section>
+
+    <section class="parte" id="meditacao" aria-labelledby="t-meditacao">
+      <h2 id="t-meditacao"><span class="num">II.</span> Meditação</h2>
+      <p class="rubrica">Lê devagar. Quando um pensamento tocar a alma, detém-te nele e deixa que produza afetos, sem pressa de passar adiante.</p>
+      <div class="abas" id="abas" role="tablist" aria-label="Meditações do dia" hidden></div>
+      <article class="meditacao" id="meditacao-texto"></article>
+    </section>
+
+    <section class="parte" id="afetos" aria-labelledby="t-afetos">
+      <h2 id="t-afetos"><span class="num">III.</span> Afetos, súplicas e resoluções</h2>
+      <p class="justificado">O proveito da oração mental não está tanto em meditar quanto em fazer afetos, súplicas e resoluções. Repitam-se sobretudo os atos de amor e de contrição.</p>
+
+      <ul class="lista-afetos">
+        <li><b>Humildade</b><span>Senhor, nada sou e nada posso sem vós.</span></li>
+        <li><b>Confiança</b><span>Meu Jesus, tudo espero de vós, pelos merecimentos do vosso Sangue.</span></li>
+        <li><b>Contrição</b><span>Ó Bondade infinita, pesa-me de vos ter ofendido; antes morrer que tornar a pecar.</span></li>
+        <li><b>Amor</b><span>Meu Deus, eu vos amo sobre todas as coisas, mais do que a mim mesmo.</span></li>
+        <li><b>Oferecimento</b><span>Eis-me aqui, Senhor: fazei de mim o que vos aprouver.</span></li>
+        <li><b>Conformidade</b><span>Seja feita em tudo a vossa santíssima vontade.</span></li>
+      </ul>
+
+      <p class="justificado"><span class="rubrica">Súplicas.</span> Pede a Deus luz, humildade e as demais virtudes; pede sobretudo o seu santo amor e a perseverança final, por amor de Jesus Cristo e de Maria.</p>
+      <p class="justificado"><span class="rubrica">Resoluções.</span> Antes de terminar, toma uma resolução particular para este dia: fugir de uma ocasião, praticar uma virtude, suportar com paciência uma pessoa ou uma contrariedade.</p>
+    </section>
+
+    <section class="parte" id="conclusao" aria-labelledby="t-conclusao">
+      <h2 id="t-conclusao"><span class="num">IV.</span> Conclusão</h2>
+      <p class="rubrica">Na conclusão fazem-se três atos: de agradecimento pelas luzes recebidas, de propósito de cumprir as resoluções, e de pedido de auxílio para ser fiel.</p>
+
+      <div class="ato">
+        <h3>1. Agradecimento</h3>
+        <p class="oracao">Meu Deus, eu vos dou graças pelas luzes que me destes nesta oração.</p>
+      </div>
+      <div class="ato">
+        <h3>2. Propósito</h3>
+        <p class="oracao">Proponho firmemente, com a vossa graça, cumprir as resoluções que tomei.</p>
+      </div>
+      <div class="ato">
+        <h3>3. Pedido de auxílio</h3>
+        <p class="oracao">Eterno Pai, por amor de Jesus e de Maria, dai-me a graça de vos ser fiel.</p>
+      </div>
+
+      <p class="rubrica">Recomendem-se depois a Deus, com um Pai-Nosso e uma Ave-Maria:</p>
+      <ul class="recomendacoes">
+        <li>as almas do Purgatório;</li>
+        <li>os Prelados da Igreja;</li>
+        <li>os pecadores;</li>
+        <li>os parentes e amigos.</li>
+      </ul>
+
+      <details class="oracoes">
+        <summary>Pai-Nosso</summary>
+        <p>Pai nosso, que estais no céu, santificado seja o vosso nome; venha a nós o vosso reino; seja feita a vossa vontade, assim na terra como no céu. O pão nosso de cada dia nos dai hoje; perdoai-nos as nossas ofensas, assim como nós perdoamos a quem nos tem ofendido; e não nos deixeis cair em tentação, mas livrai-nos do mal. Amém.</p>
+        <p class="latim" lang="la">Pater noster, qui es in cælis, sanctificétur nomen tuum. Advéniat regnum tuum. Fiat volúntas tua, sicut in cælo et in terra. Panem nostrum quotidiánum da nobis hódie, et dimítte nobis débita nostra, sicut et nos dimíttimus debitóribus nostris. Et ne nos indúcas in tentatiónem, sed líbera nos a malo. Amen.</p>
+      </details>
+
+      <div class="proposito">
+        <label for="campo-proposito">Ramalhete espiritual e resolução do dia</label>
+        <textarea id="campo-proposito" placeholder="O pensamento que mais tocou a alma, para lembrar durante o dia, e a resolução tomada."></textarea>
+        <p class="dica" id="dica-proposito">Fica guardado só neste aparelho, junto à data escolhida.</p>
+      </div>
+
+      <blockquote class="epigrafe">
+        Quem reza certamente se salva; quem não reza certamente se condena.
+        <cite>Santo Afonso, Do grande meio da oração</cite>
+      </blockquote>
+    </section>
+  </main>
+
+  <footer class="rodape">
+    <p>Textos das meditações: <a href="https://rumoasantidade.com.br/meditacoes-santo-afonso/" target="_blank" rel="noopener">Meditações de Santo Afonso, Rumo à Santidade</a>.</p>
+    <p>Dia litúrgico calculado segundo as rubricas de 1960 (Missal Romano de 1962), calendário universal.</p>
+  </footer>
+</div>
+
+<script src="js/santoral.js"></script>
+<script src="js/calendario1962.js"></script>
+<script src="data/meditacoes.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
