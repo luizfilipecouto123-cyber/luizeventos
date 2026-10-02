@@ -176,6 +176,9 @@ dialog.conversa{width:min(94vw,640px);padding:0;overflow:hidden}
 .escrita-acoes .enviar{order:3}
 .sua-vez{font-family:var(--serif);font-style:italic;margin:0 0 6px}
 #sendStatus{min-height:1.2em;margin:6px 2px}
+.intent-hint{margin:6px 2px 0;line-height:1.45}
+.intent-hint .lnk{white-space:nowrap}
+.intent-hint .ic,#sendStatus .ic{color:var(--lit)}
 .cmdbar{display:flex;flex-direction:column;gap:8px;margin-top:6px}
 .cmd-linha{display:flex;gap:6px;flex-wrap:wrap}
 .cmd{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:.84rem;font-weight:500;cursor:pointer;transition:border-color .15s,transform .15s}
@@ -203,6 +206,8 @@ dialog.conversa{width:min(94vw,640px);padding:0;overflow:hidden}
 .toast small{display:block;font-family:var(--display);letter-spacing:.08em;color:var(--gold);font-size:.72rem}
 .toast b{display:block;font-family:var(--serif);font-size:1.05rem}
 .toast span{display:block;color:var(--muted);font-size:.85rem}
+/* no jogo, o aviso desce para baixo da barra e das abas, sem tapar a navegação */
+body.em-jogo .toast{top:calc(108px + env(safe-area-inset-top,0px))}
 @keyframes toastin{from{opacity:0;transform:translate(-50%,-14px)}to{opacity:1;transform:translate(-50%,0)}}
 @keyframes toastout{to{opacity:0;transform:translate(-50%,-14px)}}
 @media (prefers-reduced-motion:reduce){.toast,.toast.sai{animation:none}}
@@ -418,6 +423,7 @@ dialog.ficha{width:min(94vw,600px);padding:0;overflow:hidden}
     <div class="sub-h"><button class="ghost small voltar" type="button">‹ Menu</button><h2 class="homeh">Como jogar</h2></div>
     <div id="howBox" class="howbox">
       <p><b>Você escreve o que faz</b>, em texto livre, ou toca numa das opções de ação. O Claude narra o resultado e dá voz a todos os outros, mas nunca decide nem fala por você.</p>
+      <p><b>O texto livre vira ação.</b> "Converso a sós com o Camerlengo" abre a audiência; "reúno o Decano e o Substituto", a reunião; "escrevo uma encíclica sobre…" vai para a aba Atos; "deixo passar uma semana" avança o tempo. Abaixo do campo aparece como a jogada será tratada, com a opção de mandá-la como texto comum.</p>
       <p><b>O que você vê pode não ser a verdade.</b> O painel é o que os relatórios dizem; dossiês, segundas opiniões e audiências aproximam você do real.</p>
       <p><b>O mundo não espera.</b> Pessoas, facções e governos seguem os próprios planos, escrevem ao Papa e cobram promessas; consequências adiadas voltam ligadas à decisão que as causou.</p>
       <p><b>Audiências e reuniões</b> não gastam tempo, mas a agenda tem limite: até quatro por dia.</p>
@@ -658,6 +664,7 @@ dialog.ficha{width:min(94vw,600px);padding:0;overflow:hidden}
             <button class="ghost small" id="btnUndo" type="button">Desfazer</button>
           </div>
         </div>
+        <p id="intentHint" class="note intent-hint hidden" aria-live="polite"></p>
         <p id="sendStatus" class="note"></p>
         <div class="cmdbar" id="chips" role="toolbar" aria-label="Comandos"></div>
       </div>
@@ -714,15 +721,16 @@ dialog.ficha{width:min(94vw,600px);padding:0;overflow:hidden}
       </div>
       <div class="chart"><svg id="forceSvg" viewBox="0 0 600 380" role="img" aria-label="Mapa de forças"></svg></div>
       <p class="note mt">Horizontal: atitude percebida em relação ao Papa. Vertical: peso na Igreja. Percebida quer dizer o que chega ao Papa, que pode não ser a verdade.</p>
-      <div id="faccoesList"></div>
-    </section>
-    <section>
-      <h2>Facções entre si</h2>
-      <p class="note">O que cada facção pensa das outras (a linha sobre a coluna), de hostil a aliada. Elas agem entre si, não só em relação ao Papa: favorecer uma desperta o ciúme das rivais. Toque numa facção para ver a ficha, os membros e os movimentos.</p>
-      <div id="facMatriz" class="fac-matriz"></div>
-      <div class="legend" id="facLegenda"></div>
-      <div class="sub">Movimentos recentes entre facções</div>
-      <div id="facMov"></div>
+      <div id="facPainel">
+        <div id="faccoesList"></div>
+        <div class="sub">Opiniões entre facções</div>
+        <p class="note">O que cada facção pensa das outras (a linha sobre a coluna), de hostil a aliada. Elas agem entre si, não só em relação ao Papa: favorecer uma desperta o ciúme das rivais. Toque numa facção para ver a ficha, os membros e os movimentos.</p>
+        <div id="facMatriz" class="fac-matriz"></div>
+        <div class="legend" id="facLegenda"></div>
+        <div class="sub">Movimentos recentes entre facções</div>
+        <div id="facMov"></div>
+      </div>
+      <p class="note hidden" id="pesPainel">Toque num ponto do mapa para abrir a ficha do personagem. A lista completa está mais abaixo, em Personagens.</p>
     </section>
     <section>
       <h2>Rede de relações conhecidas</h2>
@@ -1096,19 +1104,24 @@ function calendarBlock(){
 function load(){ try{ const r=localStorage.getItem(KEY); return r?JSON.parse(r):null; }catch(e){ return null; } }
 function save(){
   if(S){ S.log=S.log.slice(-200); if(S.resumos.length>200){ const cut=S.resumos.length-200; S.resumos=S.resumos.slice(cut); S.consolidadoAte=Math.max(0,(S.consolidadoAte||0)-cut); } delete S.prev; delete S.consolidando; }
-  try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){ try{ S.log=S.log.slice(-60); localStorage.setItem(KEY,JSON.stringify(S)); }catch(e2){} }
+  /* armazenamento cheio: avisa uma vez por sequência de falhas, para o jogador gerar o bloco de estado antes de perder a partida */
+  try{ localStorage.setItem(KEY,JSON.stringify(S)); semEspaco=false; }catch(e){ try{ S.log=S.log.slice(-60); localStorage.setItem(KEY,JSON.stringify(S)); semEspaco=false; }catch(e2){ if(S&&!semEspaco){ semEspaco=true; S.log.push({r:"s",t:"Não foi possível salvar a partida neste navegador: o armazenamento está cheio. Gere o bloco de estado (Bloco de estado, em Mais comandos) para não perder o progresso, ou apague um espaço de jogo em Carregar."}); } } }
+  if(semEspaco&&$("sendStatus")) $("sendStatus").textContent="Partida não salva: o armazenamento do navegador está cheio. Gere o bloco de estado.";
   try{ if(PREV) localStorage.setItem(KEY+"-prev",PREV); else localStorage.removeItem(KEY+"-prev"); }catch(e){ PREV=null; }
 }
-let PREV=null; try{ PREV=localStorage.getItem(KEY+"-prev"); }catch(e){}
+let PREV=null, semEspaco=false; try{ PREV=localStorage.getItem(KEY+"-prev"); }catch(e){}
 S=migrate(load());
 function lerEspaco(n){ try{ const r=localStorage.getItem(keyDo(n)); return r?JSON.parse(r):null; }catch(e){ return null; } }
-function usarEspaco(n){ if(n===SLOT) return; if(S) save(); showAll=false; selKey=null; selNode=null; CV_EXTRA=[]; ZPRESET=null; SLOT=n; KEY=keyDo(n); try{ localStorage.setItem(KEY0+"-espaco",String(n)); }catch(e){} S=migrate(load()); PREV=null; try{ PREV=localStorage.getItem(KEY+"-prev"); }catch(e){} tab="cena"; }
+/* cada troca de partida (outro espaço, apagar, recomeçar) cancela o pedido em curso; respostas atrasadas não tocam a partida nova */
+let espacoGer=0;
+function novaGeracao(){ espacoGer++; if(ctl){ try{ ctl.abort(); }catch(e){} } }
+function usarEspaco(n){ if(n===SLOT) return; novaGeracao(); if(S) save(); showAll=false; selKey=null; selNode=null; CV_EXTRA=[]; ZPRESET=null; SLOT=n; KEY=keyDo(n); try{ localStorage.setItem(KEY0+"-espaco",String(n)); }catch(e){} S=migrate(load()); PREV=null; try{ PREV=localStorage.getItem(KEY+"-prev"); }catch(e){} tab="cena"; }
 /* começar algo novo: usa o espaço atual se vazio, senão o primeiro vazio; com os três ocupados, pergunta antes de substituir */
 function espacoParaNovo(){
   if(!S) return true;
   for(let n=1;n<=3;n++){ if(!lerEspaco(n)){ usarEspaco(n); return true; } }
   if(!confirm(`Os três espaços estão ocupados. Substituir a partida do espaço ${SLOT} (${S.papa.nome_papal||"pontificado"})? Gere o bloco de estado antes, se quiser guardá-la.`)) return false;
-  S=null; PREV=null; try{ localStorage.removeItem(KEY); localStorage.removeItem(KEY+"-prev"); }catch(e){} return true;
+  novaGeracao(); S=null; PREV=null; try{ localStorage.removeItem(KEY); localStorage.removeItem(KEY+"-prev"); }catch(e){} return true;
 }
 function migrate(s){
   if(!s) return s;
@@ -1277,10 +1290,15 @@ function newState(z){
 const _sa=x=>_n(x).normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 function acharPessoa(nome){ const k=_sa(nome); return S.personagens.find(y=>_sa(y.nome)===k); }
 function nomeCanonico(nome){ if(nome==="Papa") return nome; const x=acharPessoa(nome); return x?x.nome:String(nome||""); }
+/* o narrador às vezes manda objeto, lista ou booleano onde vai um texto: vira vazio (e o item sem nome é ignorado), nunca "[object Object]" */
+const CHAVES_TEXTO=new Set(["nome","titulo","texto","de","a","b","com","tipo","nota","estado","atores","proximo_passo","prazo","esfera","pauta","lideres","plano","habito","recusa","desejo","frase","conclusao","memorias","segredo","cargo","faccao","assunto","regiao","conteudo","fonte","caminho","exatidao","decisao","analise","causa","efeito","dialogo","situacao","lider","instrumento","grau","quando","evento","motivo","resumo","data","data_iso","urgencia","formal","disposicao","disposicao_real"]);
+function limparTextos(v,prof=0){ if(prof>7||v==null||typeof v!=="object") return v; if(Array.isArray(v)){ for(let i=0;i<v.length;i++) v[i]=limparTextos(v[i],prof+1); return v; } for(const k of Object.keys(v)){ const x=v[k]; v[k]=CHAVES_TEXTO.has(k)&&(typeof x==="object"&&x!==null||typeof x==="boolean")?"":limparTextos(x,prof+1); } return v; }
+const tx=v=>typeof v==="string"?v:(typeof v==="number"&&Number.isFinite(v))?String(v):"";
 function applyState(j,pool,opt={}){
   const primeiraAplic=!!(S&&!S.hist.length), inicial=primeiraAplic||!!opt.inicial;
   const notices=[];
-  if(!j) return notices;
+  if(!j||typeof j!=="object") return notices;
+  limparTextos(j);
   if(j.data) S.data=String(j.data);
   if(j.data_iso){ const d=String(j.data_iso).slice(0,10), [,mm,dd]=d.split("-").map(Number);
     const valida=/^\d{4}-\d{2}-\d{2}$/.test(d)&&mm>=1&&mm<=12&&dd>=1&&dd<=31&&!isNaN(Date.parse(d+"T00:00:00Z"))&&new Date(Date.parse(d+"T00:00:00Z")).getUTCDate()===dd;
@@ -1333,7 +1351,7 @@ function applyState(j,pool,opt={}){
       S.faccoes.forEach(B=>{ if(B===A||tocadas.has(B)||caiu.has(B)||B.atitude<=1) return; const op=opiniao(B,A); if(op==null||op>lim) return;
         B.atitude--; caiu.add(B); notices.push(`Ciúmes: ${B.nome} vê com maus olhos o favor a ${A.nome}; a atitude em relação ao Papa cai para ${ATIT[B.atitude]}.`);
         S.movimentos.push({data:S.data_iso||"",faccoes:[B.nome,A.nome],tipo:"reação",texto:`${B.nome} reage ao favor do Papa a ${A.nome} e se afasta dele.`,conhecido:true}); }); }); }
-  if(Array.isArray(j.movimentos)) j.movimentos.filter(m=>m&&(m.texto||m.tipo)).slice(0,4).forEach(m=>{ const fs=(Array.isArray(m.faccoes)?m.faccoes:[m.a,m.b]).filter(Boolean).map(n=>{ const x=acharFaccao(n); return x?x.nome:String(n).slice(0,80); }).slice(0,4);
+  if(Array.isArray(j.movimentos)) j.movimentos.filter(m=>m&&(m.texto||m.tipo)).slice(0,4).forEach(m=>{ const fs=(Array.isArray(m.faccoes)?m.faccoes:[m.a,m.b]).map(tx).filter(Boolean).map(n=>{ const x=acharFaccao(n); return x?x.nome:String(n).slice(0,80); }).slice(0,4);
     const o={data:S.data_iso||"",faccoes:fs,tipo:String(m.tipo||"manobra").slice(0,30),texto:String(m.texto||"").slice(0,240),conhecido:m.conhecido!==false}; S.movimentos.push(o);
     if(o.conhecido&&!inicial) notices.push(`Facções, ${o.tipo}: ${o.texto||fs.join(" e ")}`); });
   if(S.movimentos.length>40) S.movimentos=S.movimentos.slice(-40);
@@ -1352,7 +1370,7 @@ function applyState(j,pool,opt={}){
     if(Array.isArray(m.fios)) m.fios.forEach(c=>{ if(!c||!c.nome) return; const nm=String(c.nome); const i=S.mundo.fios.findIndex(f=>f.nome===nm);
       if(c.remover===true){ if(i>=0){ S.mundo.fios.splice(i,1); notices.push(`Mundo: ${nm} saiu de cena.`); } return; }
       const pv=i>=0?S.mundo.fios[i]:{};
-      const o={nome:nm,esfera:String(c.esfera||pv.esfera||"geopolítica"),estado:String(c.estado??pv.estado??""),atores:String(c.atores??pv.atores??""),proximo_passo:String(c.proximo_passo??pv.proximo_passo??""),prazo:String(c.prazo??pv.prazo??""),paises:Array.isArray(c.paises)?c.paises.map(String).slice(0,12):(pv.paises||[]),intensidade:c.intensidade!=null?lv(c.intensidade):(pv.intensidade||3)};
+      const o={nome:nm,esfera:String(c.esfera||pv.esfera||"geopolítica"),estado:String(c.estado??pv.estado??""),atores:String(c.atores??pv.atores??""),proximo_passo:String(c.proximo_passo??pv.proximo_passo??""),prazo:String(c.prazo??pv.prazo??""),paises:Array.isArray(c.paises)?c.paises.map(tx).filter(Boolean).slice(0,12):(pv.paises||[]),intensidade:c.intensidade!=null?lv(c.intensidade):(pv.intensidade||3)};
       if(i>=0){ if(o.intensidade-pv.intensidade>=2) notices.push(`Mundo: ${nm} se agravou.`); S.mundo.fios[i]=o; } else S.mundo.fios.push(o); });
     S.mundo.fios=S.mundo.fios.slice(-20);
     if(m.calendario) S.mundo.calendario=aplicarLista(S.mundo.calendario,m.calendario,"evento",e=>e&&e.evento?{quando:String(e.quando||""),evento:String(e.evento)}:null,25);
@@ -1398,16 +1416,16 @@ function applyState(j,pool,opt={}){
   if(S.cronica.length>80) S.cronica=S.cronica.slice(-80);
   if(j.compromissos){ const ant=S.compromissos; S.compromissos=aplicarLista(S.compromissos,j.compromissos,"texto",c=>c&&c.texto?{tipo:String(c.tipo||"promessa"),com:String(c.com||""),texto:String(c.texto)}:null,30); S.compromissos.forEach(c=>{ if(!c.data){ const o=ant.find(x=>_n(x.texto)===_n(c.texto)); c.data=(o&&o.data)||S.data_iso||""; } }); }
   if(Array.isArray(j.opcoes)) S.opcoes=j.opcoes.map(textoOpcao).filter(Boolean).slice(0,4);
-  if(Array.isArray(j.registro)) S.registro=j.registro.map(String).slice(0,15);
+  if(Array.isArray(j.registro)) S.registro=j.registro.map(tx).filter(Boolean).slice(0,15);
   if(Array.isArray(j.rumores)) S.rumores=j.rumores.filter(r=>r&&r.conteudo).slice(0,15).map(r=>({conteudo:String(r.conteudo),fonte:String(r.fonte||""),caminho:String(r.caminho||""),exatidao:String(r.exatidao||""),chegou:r.chegou_ao_papa===true}));
   if(Array.isArray(j.riscos)) j.riscos.forEach(r=>{ if(r&&r.decisao) S.riscos.push({decisao:String(r.decisao),analise:String(r.analise||""),data:S.data_iso||""}); }); S.riscos=S.riscos.slice(-12);
-  if(j.notas_ocultas){ const antes=S.notas.length; S.notas=aplicarLista(S.notas,j.notas_ocultas,null,x=>x?String(x):null,40); if(author&&antes>=40&&j.notas_ocultas.add&&j.notas_ocultas.add.length) notices.push("Notas ocultas no limite de 40: as mais antigas saíram. Peça ao narrador que retire as já resolvidas."); }
+  if(j.notas_ocultas){ const antes=S.notas.length; S.notas=aplicarLista(S.notas,j.notas_ocultas,null,x=>tx(x)||null,40); if(author&&antes>=40&&j.notas_ocultas.add&&j.notas_ocultas.add.length) notices.push("Notas ocultas no limite de 40: as mais antigas saíram. Peça ao narrador que retire as já resolvidas."); }
   if(j.fim && typeof j.fim==="object" && j.fim.motivo && !S.fim){ S.fim={motivo:String(j.fim.motivo),data:S.data_iso}; notices.push(`Fim do pontificado: ${S.fim.motivo}. Segue o epílogo: sé vacante e conclave.`); }
   if(Array.isArray(j.igrejas)) j.igrejas.forEach(g=>{ if(!g||!g.nome) return; const x=S.igrejas.find(y=>y.nome===g.nome); const o={nome:String(g.nome),tipo:String(g.tipo||x?.tipo||"outra religião"),lider:String(g.lider||x?.lider||""),relacao:(!inicial&&x&&g.relacao!=null)?Math.min(lv(g.relacao),x.relacao+1):lv(g.relacao??x?.relacao),dialogo:String(g.dialogo||x?.dialogo||""),situacao:String(g.situacao||x?.situacao||""),nota:String(g.nota||x?.nota||"")}; if(x){ if(S.hist.length&&x.relacao!==o.relacao&&Math.abs(x.relacao-o.relacao)>=1) notices.push(`Ecumenismo: relação com ${o.nome} de ${LV[x.relacao]} para ${LV[o.relacao]}.`); Object.assign(x,o); } else if(S.igrejas.length<40) S.igrejas.push(o); });
   if(j.agenda) S.agenda=aplicarLista(S.agenda,j.agenda,"titulo",a=>a&&a.titulo?{quando:String(a.quando||""),titulo:String(a.titulo),tipo:String(a.tipo||"")}:null,30);
   if(j.data_iso) S.agenda=S.agenda.filter(a=>!_passou(a.quando));
-  if(j.pendencias) S.pendencias=aplicarLista(S.pendencias,j.pendencias,null,x=>x?String(x):null,20);
-  if(j.efeitos) S.efeitos=aplicarLista(S.efeitos,j.efeitos,null,x=>x?String(x):null,30);
+  if(j.pendencias) S.pendencias=aplicarLista(S.pendencias,j.pendencias,null,x=>tx(x)||null,20);
+  if(j.efeitos) S.efeitos=aplicarLista(S.efeitos,j.efeitos,null,x=>tx(x)||null,30);
   const umPasso=(novo,ant)=>(inicial||!DISPN[novo]||!DISPN[ant]||DISPN[novo]<=DISPN[ant]+1)?novo:Object.keys(DISPN).find(k=>DISPN[k]===DISPN[ant]+1);
   if(Array.isArray(j.personagens)) j.personagens.forEach(p=>{ if(!p||!p.nome) return; const x=acharPessoa(p.nome); const disp=DISPN[p.disposicao]?umPasso(p.disposicao,x?.disposicao):(x?.disposicao||"reservado"); const o={nome:x?x.nome:String(p.nome).slice(0,120),cargo:String(p.cargo||x?.cargo||""),disposicao:disp,disposicao_real:DISPN[p.disposicao_real]?umPasso(p.disposicao_real,x?.disposicao_real):(x?.disposicao_real||disp),faccao:String(p.faccao??x?.faccao??""),influencia:lv(p.influencia??x?.influencia),segredo:String(p.segredo??x?.segredo??""),habito:String(p.habito||x?.habito||""),recusa:String(p.recusa||x?.recusa||""),desejo:String(p.desejo||x?.desejo||""),frase:String(p.frase||x?.frase||""),conclusao:String(p.conclusao||x?.conclusao||""),plano:String(p.plano||x?.plano||""),memorias:String(p.memorias||x?.memorias||""),nota:String(p.nota||x?.nota||""),ativo:p.ativo===false?false:(p.ativo===true?true:(x?.ativo!==false))}; if(x) Object.assign(x,o); else S.personagens.push(o); });
   if(Array.isArray(j.personagens)) j.personagens.forEach(p=>{ const x=p&&p.nome&&acharPessoa(p.nome); if(x) x.visto=S.nresp||0; });
@@ -1547,14 +1565,16 @@ ${OUT_RULES}
 Neste primeiro JSON, comece por "data", "data_iso", "resumo" e "opcoes" (de 3 a 4 ações distintas para o ponto em que a primeira cena para, ao menos uma prudente e uma ousada) e envie também: "eleicao" (AAAA-MM-DD); "papa" com todos os dados finais do Papa (chaves iguais às da sessão zero, preenchidas); "atributos" (os cinco, de 1 a 5, somando 15); "vida_espiritual" inicial (0 a 10, em geral 6 a 8); "painel" e "painel_real" completos (o real pode divergir onde algo já está escondido) e "justificativas" (uma linha curta por indicador); "recepcao" com as 10 sub-regiões; "agenda" dos primeiros dias (${hist?"conforme os costumes da época":"incluindo Missa com os cardeais, confirmação dos chefes de dicastério, audiência com o Colégio, encontro com jornalistas, primeiro Angelus ou Regina Caeli, Missa de início do ministério petrino, posse do Latrão, conforme o costume"}); "pendencias"; "registro" inicial; e "personagens" com o elenco completo já ajustado ao que o usuário pediu (incluindo o secretário particular), cada um SÓ com nome, cargo, faccao, influencia, disposicao e disposicao_real. O mundo em segundo plano, as Igrejas, os Estados, as facções, as relações de bastidores e os traços e planos dos personagens são pedidos à parte, logo depois: NÃO os envie agora. Frases curtas em todos os campos: uma resposta longa demais é cortada e se perde.`;
   $("btnStart").disabled=true; $("btnStop0").classList.remove("hidden");
   startTimer($("zeroStatus"),"O conclave terminou; o mundo se prepara…");
-  ctl=new AbortController();
+  const meu=ctl=new AbortController(), ger=espacoGer;
   const box=$("zeroStream");
   try{
     const res0=await llm(prompt,{modelTier:"default",cache:false,signal:ctl.signal,onText:({text})=>{ stopTimer(); $("zeroStatus").textContent="Escrevendo…"; renderNarr(box,text.split(SEP)[0]); }});
     const text=res0.text;
     stopTimer();
+    if(ger!==espacoGer){ box.innerHTML=""; return; }
     let {narr,json,opcoesTexto,cortado}=lerResposta(text);
     if(!json&&narr.trim()){ const prevS=S; S=S||{data_iso:null,personagens:[],mundo:{fios:[]}}; json=await repararEstado(narr); S=prevS; }
+    if(ger!==espacoGer){ box.innerHTML=""; return; }
     S=newState(z); PREV=null; S.needsBackground=true;
     applyState(json); completarOpcoes(opcoesTexto);
     if(!S.eleicao) S.eleicao=S.data_iso;
@@ -1569,9 +1589,9 @@ Neste primeiro JSON, comece por "data", "data_iso", "resumo" e "opcoes" (de 3 a 
     if(!/conclave/i.test(z.abertura||"")) cerimonia("habemus");
     conq(c=>{ c.inicios=(c.inicios||0)+1; const e=eraDe(S.data_iso).id; c.eras=[...new Set([...(c.eras||[]),e])]; if(z._preset) c.presets=[...new Set([...(c.presets||[]),z._preset])]; });
   }catch(e){
-    stopTimer(); $("zeroStatus").textContent=errCopy(e);
+    stopTimer(); box.innerHTML=""; $("zeroStatus").textContent=ger!==espacoGer?"":errCopy(e);
   }finally{
-    $("btnStart").disabled=false; $("btnStop0").classList.add("hidden"); ctl=null;
+    $("btnStart").disabled=false; $("btnStop0").classList.add("hidden"); if(ctl===meu) ctl=null;
   }
 };
 
@@ -1598,12 +1618,14 @@ ${OUT_RULES}
 Neste primeiro JSON, comece por "data", "data_iso", "resumo" e "opcoes" (de 3 a 4 ações para o ponto em que a cena de retomada para) e então reconstrua TODO o estado a partir do bloco, em frases curtas: "eleicao", painel, painel_real, divergencias, justificativas, recepcao com as 10 sub-regiões, estados com "formal", agenda, pendencias, efeitos, "personagens" completos (com faccao, influencia, disposicao, disposicao_real, segredo), "faccoes", "relacoes" (mantenha ocultas as que o bloco indicar como ocultas), "atos" já registrados, "atributos", "vida_espiritual", "mundo" completo com fios de fundo, "registro", "rumores", "notas_ocultas" (as Notas do narrador do bloco), traços e mentes dos personagens, "igrejas" e "papa" com todos os dados do Papa (chaves: nome, nome_papal, idade, nacionalidade, saude, ordenacao, formacao, cargos, linguas, lema, brasao, residencia, rito, vestes, realismo, derrota).`;
   $("btnImport").disabled=true; $("btnStart").disabled=true; $("btnStop0").classList.remove("hidden");
   startTimer($("zeroStatus"),"Reabrindo os arquivos do pontificado…");
-  ctl=new AbortController(); const box=$("zeroStream");
+  const meu=ctl=new AbortController(), ger=espacoGer; const box=$("zeroStream");
   try{
     const {text}=await llm(prompt,{modelTier:"default",cache:false,signal:ctl.signal,onText:({text})=>{ if(timer){ stopTimer(); $("zeroStatus").textContent="Escrevendo…"; } renderNarr(box,text.split(SEP)[0]); }});
     stopTimer();
+    if(ger!==espacoGer){ box.innerHTML=""; return; }
     let {narr,json,opcoesTexto}=lerResposta(text);
     if(!json&&narr.trim()){ const prevS=S; S=S||{data_iso:null,personagens:[],mundo:{fios:[]}}; json=await repararEstado(narr); S=prevS; }
+    if(ger!==espacoGer){ box.innerHTML=""; return; }
     if(!json){ $("zeroStatus").textContent="O estado não pôde ser reconstruído. Tente de novo."; return; }
     /* o estado de partida segue a época do bloco: numa partida histórica, nada de elenco, facções e Igrejas de hoje */
     const dImp=String(json.data_iso||json.eleicao||"").slice(0,10), zImp=/^\d{4}-\d{2}-\d{2}$/.test(dImp)?{data:dImp}:{};
@@ -1612,8 +1634,8 @@ Neste primeiro JSON, comece por "data", "data_iso", "resumo" e "opcoes" (de 3 a 
     const parts=narr.split(/\n-{3,}\s*\n/); parts.forEach(pt=>{ if(pt.trim()) S.log.push({r:"n",t:pt.trim()}); });
     save(); box.innerHTML=""; $("zeroStatus").textContent=""; tab="cena"; render(); scrollLog();
     prepararBastidores();
-  }catch(e){ stopTimer(); $("zeroStatus").textContent=errCopy(e); }
-  finally{ $("btnImport").disabled=false; $("btnStart").disabled=false; $("btnStop0").classList.add("hidden"); ctl=null; }
+  }catch(e){ stopTimer(); box.innerHTML=""; $("zeroStatus").textContent=ger!==espacoGer?"":errCopy(e); }
+  finally{ $("btnImport").disabled=false; $("btnStart").disabled=false; $("btnStop0").classList.add("hidden"); if(ctl===meu) ctl=null; }
 };
 
 /* ---------- cena ---------- */
@@ -1644,6 +1666,98 @@ function buildChips(){
   pri.appendChild(mais); c.appendChild(pri);
   if(cmdAberto) ["g","c","a"].forEach(g=>{ const grp=el("div",{class:"cmd-grupo"}); grp.appendChild(el("span",{class:"cmd-rot"},GRUPOS[g])); const ln=el("div",{class:"cmd-linha"}); CHIPS.filter(x=>x[5]===g).forEach(x=>ln.appendChild(mk(x))); grp.appendChild(ln); c.appendChild(grp); });
 }
+/* ---------- texto livre que é comando: o app reconhece a intenção e faz a ação própria ----------
+   audiência, reunião e confissão abrem a conversa privada; correspondência, abas e /salvar abrem a tela;
+   atos, tempo, conselho, dossiê, riscos, imprensa e metas seguem ao narrador com o comando indicado (e o ato vai para a aba Atos) */
+const _re=k=>k.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+const PAPEIS=[[/\bdecano\b/,/decano/i],[/\bcamerlengo\b/,/camerlengo/i],[/\bsubstituto\b/,/substituto/i],[/\b(confessor|pregador)\b/,/confessor|pregador/i],[/\bsecretario de estado\b/,/secret[aá]rio de estado/i],[/\b(meu secretario|secretario particular)\b/,/secret[aá]rio particular/i],[/\b(guarda suica|comandante da guarda)\b/,/guarda su[ií][çc]a/i],[/\b(sala de imprensa|porta-voz)\b/,/sala de imprensa/i],[/\bvigario de roma\b/,/vig[aá]rio de roma/i],[/\b(mestre de cerimonias|mestre das celebracoes)\b/,/mestre das celebra/i],[/\b(ajudante de camara|camareiro)\b/,/ajudante de c[aâ]mara/i]];
+function interlocutoresCitados(txt){
+  const T=" "+_sa(txt)+" ", ach=[];
+  const pos=k=>{ k=_sa(k); if(k.length<4) return -1; const m=T.match(new RegExp("(^|[^a-z0-9])"+_re(k)+"($|[^a-z0-9])")); return m?m.index:-1; };
+  const menor=(a,b)=>a<0?b:b<0?a:Math.min(a,b);
+  S.personagens.filter(p=>p.ativo!==false).forEach(p=>{ let i=-1; keysOf(p).forEach(k=>{ i=menor(i,pos(k)); }); PAPEIS.forEach(([re,cr])=>{ if(cr.test((p.cargo||"")+" "+(p.nota||""))){ const m=T.match(re); if(m) i=menor(i,m.index); } }); if(i>=0) ach.push([i,"p:"+p.nome]); });
+  /* facção citada numa reunião: entram os membros dela */
+  S.faccoes.forEach(f=>{ const i=menor(pos(f.nome),pos(String(f.nome).split(/\s+/)[0])); if(i>=0) membrosFac(f).forEach((p,k)=>ach.push([i+k/10,"p:"+p.nome])); });
+  /* Igrejas: pelo nome, pelo que vem entre parênteses ou por um líder com nome próprio (não "Patriarca" ou "Presidente" soltos) */
+  S.igrejas.forEach(g=>{ let i=-1; [/\s/.test(String(g.lider||"").trim())?g.lider:"",g.nome,(String(g.nome).match(/\(([^)]+)\)/)||[])[1]].filter(Boolean).forEach(k=>{ i=menor(i,pos(k)); }); if(i>=0) ach.push([i,"i:"+g.nome]); });
+  Object.keys(S.estados).forEach(n=>{ const m=T.match(new RegExp("(governo|embaixador|embaixada|presidente|primeiro-ministro|rei|rainha|imperador|soberano|chanceler|enviado|ministro)[a-z -]{0,25}\\b(de|da|do|dos|das)\\s+"+_re(_sa(n))+"($|[^a-z])")); if(m) ach.push([m.index,"e:"+n]); });
+  return [...new Set(ach.sort((a,b)=>a[0]-b[0]).map(x=>x[1]))];
+}
+const INSTR=[[/\benciclica\b/,"encíclica"],[/\bexortacao( apostolica)?\b/,"exortação apostólica"],[/\bconstituicao apostolica\b/,"constituição apostólica"],[/\bmotu proprio\b/,"carta apostólica motu proprio"],[/\bcarta apostolica\b/,"carta apostólica"],[/\bbula\b/,"bula"],[/\bquirografo\b/,"quirógrafo"],[/\brescrito\b/,"rescrito"],[/\bdecreto\b/,"decreto"],[/\b(jubileu|ano santo)\b/,"bula de indicção"],[/\bconcilio\b/,"convocação de concílio"],[/\bsinodo\b/,"convocação do Sínodo"],[/\bconsistorio\b/,"consistório"],[/\b(canoniz|beatific)/,"decreto de canonização"],[/\bdogma\b/,"definição dogmática"]];
+const ABAS={painel:"painel",agenda:"agenda",estado:"agenda",registro:"agenda","livro de registro":"agenda",mundo:"mundo",igrejas:"mundo",personagens:"elenco",elenco:"elenco",faccoes:"elenco",atos:"atos",mapa:"painel"};
+function interpretarLivre(msg){
+  const raw=String(msg||"").trim(); if(!raw||!S||S.fim&&!/^\/(painel|agenda|estado|mundo|igrejas|personagens|elenco|atos|correspondencia)/i.test(raw)) return null;
+  const T=_sa(raw); let m;
+  const nomeDe=k=>{ const x=interlocutores().find(i=>i.chave===k); return x?x.nome:k.slice(2); };
+  /* comandos com barra que o app executa sozinho */
+  if((m=T.match(/^\/(audiencia|reuniao)\b\s*(.*)$/))){ const al=interlocutoresCitados(m[2]).slice(0,4); return al.length>=2?{tipo:"reuniao",alvos:al,rotulo:`reunião com ${al.map(nomeDe).join(", ")}`}:{tipo:"audiencia",alvos:al,rotulo:al.length?`audiência com ${nomeDe(al[0])}`:"nova audiência"}; }
+  if(/^\/(correspondencia|caixa)\b/.test(T)) return {tipo:"caixa",rotulo:"correspondência"};
+  if((m=T.match(/^\/(painel|agenda|estado|mundo|igrejas|personagens|elenco|atos)\s*$/))) return {tipo:"aba",aba:ABAS[m[1]],rotulo:`aba ${m[1]}`};
+  if(raw.startsWith("/")){ if(/^\/minuta\b/i.test(raw)){ const ins=INSTR.find(([re])=>re.test(T)); const tema=(raw.match(/\b(?:sobre|acerca d[aeo]s?)\s+(.{3,80}?)(?:[.;!?]|$)/i)||[])[1]; const nm=ins?ins[1]:"documento"; return {tipo:"ato",cmd:"/minuta",estado:"minuta",instrumento:nm,titulo:`${nm.charAt(0).toUpperCase()+nm.slice(1)}${tema?` sobre ${tema}`:""}`,rotulo:`minuta (${nm})`}; } return null; }
+  /* correspondência e respostas */
+  if(/\b(leio|abro|vejo|reviso|verifico|olho|abrir|ler)\b.{0,25}\b(correspondencia|cartas|caixa de entrada|mensagens recebidas)\b/.test(T)) return {tipo:"caixa",rotulo:"leitura da correspondência"};
+  if(/\b(respondo|responder|replico|escrevo de volta)\b.{0,60}\b(carta|nota|pedido|suplica|comunicado|mensagem)\b/.test(T)){ const abertas=S.caixa.filter(x=>!x.resposta||x.resposta==="");
+    const c=[...abertas].reverse().find(x=>{ const d=_sa(x.de); const ult=d.split(/\s+/).slice(-1)[0]; return T.includes(d)||(ult.length>=4&&T.includes(ult)); })||(abertas.length===1?abertas[0]:null);
+    if(c) return {tipo:"resposta",carta:c,rotulo:`resposta escrita a ${c.de}`}; }
+  /* conversa privada, reunião, confissão */
+  const confissao=/\b(me confesso|confessar-me|me confessar|peco (a )?confissao|ouca (a )?minha confissao|quero (me )?confessar)\b/.test(T);
+  const reuniao=/\b(reuno|reunir|reuniao|reunimo-nos)\b/.test(T);
+  const privado=!/^(respondo|replico)\b/.test(T)&&/\b(a sos|em particular|em privado|reservadamente|a portas fechadas|audiencia|conversa (privada|particular|reservada)|converso privadamente)\b/.test(T);
+  if(confissao){ const c=S.personagens.find(p=>p.ativo!==false&&confessor(p)); if(c) return {tipo:"confissao",alvos:["p:"+c.nome],rotulo:`confissão com ${c.nome}`}; }
+  if(reuniao||privado){ const al=interlocutoresCitados(raw).slice(0,4);
+    if(al.length>=2) return {tipo:"reuniao",alvos:al,rotulo:`reunião com ${al.map(nomeDe).join(", ")}`};
+    if(al.length===1) return {tipo:"audiencia",alvos:al,rotulo:`${privado?"conversa privada":"reunião"} com ${nomeDe(al[0])}`}; }
+  /* atos do pontificado */
+  const ins=INSTR.find(([re])=>re.test(T)), vM=/\b(escrev|redij|redigi|prepar|encomend|rascunh|esboc|minut)/.test(T), vP=/\b(promulg|public|assin|emit|baix|aprov|sanciono|ratific|canoniz|beatific|defin)/.test(T), vA=/\b(proclam|anunci|convoc|abro|abrir|decid|instituo|crio|criar|declar)/.test(T);
+  if(ins&&(vM||vP||vA)){ const estado=vM?"minuta":vP?"em trâmite":"anunciado", tema=(raw.match(/\b(?:sobre|acerca d[aeo]s?|a respeito d[aeo]s?)\s+(.{3,80}?)(?:[.;!?]|$)/i)||[])[1];
+    const nm=ins[1], base=/jubileu|ano santo/.test(T)?(/extraordin/.test(T)?"Ano Santo extraordinário":"Jubileu"):nm.charAt(0).toUpperCase()+nm.slice(1);
+    return {tipo:"ato",cmd:vM?"/minuta":null,estado,instrumento:nm,titulo:`${base}${tema?` sobre ${tema}`:""}`,rotulo:`${estado==="minuta"?"minuta":"ato"} (${nm})`}; }
+  /* tempo e comandos de governo */
+  if(/\b(avancar? o tempo|avanco o tempo|deixo passar|deixemos passar|passam-se|passa-se (um|uma)|que se passem?|aguardo (\d+|um|uma|dois|duas|tres|alguns|algumas) (dias?|semanas?|mes|meses)|(pulo|salto|avanco) (ate|para) (amanha|o dia seguinte|a semana que vem|o proximo mes))\b/.test(T)) return {tipo:"cmd",cmd:"/avancar",rotulo:"avanço do tempo (/avancar)"};
+  if(/\b(peco|pedir|quero ouvir|ouvir|preciso de) (o |um |seu |algum )?conselho\b|\bo que (voces |o senhor |a senhora |tu )?(me )?(aconselh|recomend|sugere)/.test(T)) return {tipo:"cmd",cmd:"/conselho",rotulo:"pedido de conselho (/conselho)"};
+  if(/\b(peco|quero|encomendo|mande|mandem|preparem|tragam)\b.{0,30}\bdossie\b/.test(T)) return {tipo:"cmd",cmd:"/dossie",rotulo:"dossiê (/dossie)"};
+  if(/\briscos?\b/.test(T)&&/\b(quais|analise|avalie|pese|pesar|analisar|avaliar)\b/.test(T)) return {tipo:"cmd",cmd:"/riscos",rotulo:"análise de riscos (/riscos)"};
+  if(/\b(imprensa|jornais|vaticanistas|redes sociais|manchetes)\b/.test(T)&&/\b(leio|o que|resumo|vejo|repercut|dizem|diz)\b/.test(T)) return {tipo:"cmd",cmd:"/imprensa",rotulo:"leitura da imprensa (/imprensa)"};
+  if((m=raw.match(/\b(?:minha meta|nova meta|defino como meta|estabeleço como meta|estabeleco como meta|tenho como meta)\b\s*(?:[:é]|e\b)?\s*(.{4,160})$/i))) return {tipo:"cmd",cmd:"/metas",meta:m[1].trim(),rotulo:"nova meta (/metas)"};
+  if((m=T.match(/\b(convoco|mando chamar|peco que venha|faco vir)\b/))&&!reuniao){ const al=interlocutoresCitados(raw); if(al.length===1&&al[0].startsWith("p:")) return {tipo:"cmd",cmd:`/convocar ${nomeDe(al[0])}`,rotulo:`convocação de ${nomeDe(al[0])} (/convocar)`}; }
+  /* telas */
+  if(raw.length<=60&&(m=T.match(/^(abr[ao]|abrir|mostr[ae]|mostrar|ver|veja|exib[ae]|quero ver|consulto)\b.{0,15}\b(livro de registro|painel|agenda|elenco|personagens|atos|mundo|registro|igrejas|mapa|faccoes)\b/))) return {tipo:"aba",aba:ABAS[m[2]],rotulo:`aba ${m[2]}`};
+  if(raw.length<=60&&/^(salvar|salve|salvo|gerar|gere|gero)\b.{0,20}\b(jogo|partida|bloco de estado)\b/.test(T)) return {tipo:"salvar",rotulo:"bloco de estado (/salvar)"};
+  return null;
+}
+/* ações que não passam pelo narrador; devolve true se tratou a jogada */
+function avisoReconhecido(txt,msg){ const st=$("sendStatus"); st.innerHTML=""; st.appendChild(ic("info",15)); st.appendChild(document.createTextNode(` ${txt} `)); if(msg){ const b=el("button",{type:"button",class:"lnk"},"Enviar à cena como texto"); b.onclick=()=>{ if(ctl) return; st.textContent=""; $("input").value=msg; send(null,{literal:true}); }; st.appendChild(b); } }
+function falaInicial(msg){ const q=(msg.match(/["“]([^"”]{3,400})["”]/)||[])[1]; if(q) return q; const t=(msg.match(/\b(?:sobre|acerca d[aeo]s?|a respeito d[aeo]s?)\s+(.{3,200})$/i)||[])[1]; return t?`Quero conversar sobre ${t.replace(/[.!]+$/,"")}.`:""; }
+function executarLocal(it,msg){
+  if(!it) return false;
+  const inp=$("input");
+  if(it.tipo==="aba"){ inp.value=""; setTab(it.aba); return true; }
+  if(it.tipo==="caixa"){ inp.value=""; abrirCaixa(); avisoReconhecido("Reconhecido como leitura da correspondência.",/^\//.test(msg)?"":msg); return true; }
+  if(it.tipo==="salvar"){ inp.value=""; openSave(); return true; }
+  if(it.tipo==="audiencia"||it.tipo==="confissao"||it.tipo==="reuniao"){
+    if(it.tipo!=="reuniao"&&!it.alvos.length){ inp.value=""; abrirConversa(null); return true; }
+    if(it.tipo==="reuniao") abrirReuniao(it.alvos); else abrirConversa(it.alvos[0]);
+    if(!CV){ avisoReconhecido(S.fim?"O pontificado terminou: não há audiências.":`Reconhecido como ${it.rotulo}, mas a agenda de hoje está cheia.`,/^\//.test(msg)?"":msg); return true; }
+    inp.value=""; CV.origemTexto=msg;
+    if(it.tipo==="confissao"&&!$("cvSigiloWrap").classList.contains("hidden")) $("cvSigilo").checked=true;
+    const f=falaInicial(msg); if(f) $("cvInput").value=f;
+    const st=$("cvStatus"); st.innerHTML=""; st.appendChild(document.createTextNode(`Aberta a partir da sua jogada (${it.rotulo}). `));
+    if(!/^\//.test(msg)){ const b=el("button",{type:"button",class:"lnk"},"Prefiro que o narrador conduza"); b.onclick=()=>{ encerrarConversa(); inp.value=msg; send(null,{literal:true}); }; st.appendChild(b); }
+    return true; }
+  return false;
+}
+/* aviso enquanto o jogador digita: como a jogada vai ser tratada */
+let literalProximo=false, dicaTimer=null;
+function atualizarDica(){
+  const h=$("intentHint"); if(!h) return; const v=$("input").value.trim(); const it=(S&&v&&!literalProximo)?interpretarLivre(v):null;
+  h.innerHTML=""; h.classList.toggle("hidden",!it&&!literalProximo); if(!it&&!literalProximo) return;
+  h.appendChild(ic(literalProximo?"pena":"info",15));
+  if(literalProximo){ h.appendChild(document.createTextNode(" Será enviada ao narrador como texto comum. ")); const b=el("button",{type:"button",class:"lnk"},"Reconhecer comandos"); b.onclick=()=>{ literalProximo=false; atualizarDica(); }; h.appendChild(b); return; }
+  h.appendChild(document.createTextNode(` Será tratada como ${it.rotulo}${it.tipo==="ato"?"; o ato vai para a aba Atos":""}. `));
+  const b=el("button",{type:"button",class:"lnk"},"Tratar como texto comum"); b.onclick=()=>{ literalProximo=true; atualizarDica(); }; h.appendChild(b);
+}
+$("input").addEventListener("input",()=>{ clearTimeout(dicaTimer); dicaTimer=setTimeout(atualizarDica,250); });
+
 function renderLog(){
   const log=$("log"); log.innerHTML="";
   const items=showAll?S.log:S.log.slice(-8);
@@ -1979,7 +2093,7 @@ function buildTurn(msg,pool){
   const lastNarr=([...S.log].reverse().find(m=>m.r==="n")||{}).t||"";
   const ag=[...S.agenda].sort((a,b)=>a.quando.localeCompare(b.quando)).slice(0,5).map(a=>a.titulo).join(" ");
   const texto=(msg+"\n"+lastNarr+"\n"+ag).toLowerCase();
-  const trig=triggers(msg+"\n"+lastNarr);
+  const trig=triggers(msg+"\n"+lastNarr); if(S._comandoTxt){ trig.cmd=true; if(/avancar/.test(S._comandoTxt)) trig.tempo=true; if(/ato do pontificado/.test(S._comandoTxt)) trig.ato=true; }
   /* nível 0 já é econômico; os seguintes só entram se o prompt passar do limite do claude.ai */
   const NIVEIS=[{hist:3,res:15,det:"mid"},{hist:2,res:10,det:"mid"},{hist:2,res:8,det:"min"},{hist:1,res:5,det:"min"},{hist:1,res:3,det:"min",semRumores:true},{hist:1,res:2,det:"min",semRumores:true,enxugar:true}];
   const fixoCompleto=()=>rulesFor("jogo",{})+"\n\n"+(anexoDaData(S.data_iso)||eraBloco(S.data_iso))+"\n\n"+OUT_RULES;
@@ -2010,7 +2124,7 @@ ${S._ancoraTxt?`CENA ÂNCORA OU SEMENTE DE EVENTO (escrita pelo autor do jogo; i
 
 NOVA JOGADA DO PAPA
 ${msg}
-
+${S._comandoTxt?`\nCOMANDO RECONHECIDO PELO APP: ${S._comandoTxt}\n`:""}
 ${pedirMundo?`Nesta resposta, estabeleça também o mundo em segundo plano (10.3), sem mencioná-lo na narração se não vier ao caso: envie "mundo" completo (8 a 15 fios de fundo com paises e intensidade, calendário dos próximos meses), "igrejas" com relacao, dialogo e situacao das registradas, os quatro traços (10.4), conclusão, plano e memórias de cada personagem principal, "registro", "rumores" e "notas_ocultas".\n\n`:""}${(S.nresp+1)%15===0?`Nesta resposta, exiba ao final o livro de registro (10.6).\n\n`:""}${S.needsOpinioes&&!pedirBastidores?`Nesta resposta, envie também em "faccoes" o "plano" e as "opinioes" de cada facção registrada sobre cada uma das outras (1 a 5). Não mencione isso na narração.\n\n`:""}${pedirBastidores?`Nesta resposta, estabeleça os bastidores que ainda faltam: envie "painel_real" completo, "recepcao" com as 10 sub-regiões, "faccoes" com forca, atitude, plano e opinioes entre si, "relacoes" com 12 a 20 relações (só as notórias com conhecida:true), complete nos "personagens" do elenco faccao, influencia, disposicao_real e segredo, e o campo "formal" dos estados já registrados. Não mencione isso na narração.\n\n`:""}Responda como narrador, seguindo todas as regras. /fora: responda fora da ficção e retome a cena numa frase. /painel: indicadores com uma linha de justificativa cada. /opcoes: opções novas, diferentes das anteriores, no campo "opcoes". /conselho: conselho dentro da ficção (9.2). "/fora como agir?": análise neutra só com o que o Papa sabe. /retomar: lembrete de 3 linhas do ponto em que a partida está, sem avançar o tempo. /tom: confirme o ajuste em uma frase e siga.
 Lembrete de formato: texto, depois ${SEP} e o JSON só com o que mudou.`;
     const total=bytes(fixo)+bytes(variavel)+2;
@@ -2021,37 +2135,44 @@ Lembrete de formato: texto, depois ${SEP} e o JSON só com o que mudou.`;
 }
 function d100(){ const a=new Uint32Array(1); crypto.getRandomValues(a); return 1+(a[0]%100); }
 function acasoPool(){ return [d100(),d100(),d100()]; }
-async function send(forcedPool){
+async function send(forcedPool,opt={}){
   if(!sample||!S||ctl) return; /* uma jogada por vez: Ctrl+Enter, botões de opção e cliques repetidos não disparam pedidos simultâneos */
   const msg=$("input").value.trim(); if(!msg) return;
+  const literal=!!opt.literal||literalProximo; literalProximo=false; $("intentHint").classList.add("hidden");
+  const intent=(literal||$("input").dataset.resp)?null:interpretarLivre(msg);
+  if(intent&&executarLocal(intent,msg)) return;
   /* depois de desfazer, a próxima jogada usa o mesmo acaso: desfazer corrige a jogada, não refaz a sorte */
   const pool=Array.isArray(forcedPool)?forcedPool:Array.isArray(S.acasoGuardado)?S.acasoGuardado:acasoPool();
   if(/^\/salvar\b/i.test(msg)){ $("input").value=""; openSave(); return; }
   if(/^\/retificar\b/i.test(msg)){ $("input").value=""; retificar(); return; }
   prepararBastidores();
-  const snap=JSON.stringify(S);
+  const snap=JSON.stringify(S), ger=espacoGer, chave=KEY;
   const opcoesAntes=S.opcoes||[];
   const foraDaFiccao=/^\s*\/(fora|painel|estado|tom|retomar|corrigir|agenda|personagens|atos|igrejas|mundo)\b/i.test(msg);
   S.opcoes=[];
   if(/^\/tom\b/i.test(msg)) S.tom=msg.replace(/^\/tom\s*/i,"").slice(0,300);
-  if(/^\/metas\s+\S/i.test(msg)){ const t=msg.replace(/^\/metas\s*/i,"").slice(0,160); if(S.metas.filter(x=>x.estado==="em curso").length<3) S.metas.push({texto:t,progresso:0,estado:"em curso",nota:""}); }
+  if(/^\/metas\s+\S/i.test(msg)||(intent&&intent.meta)){ const t=(intent&&intent.meta?intent.meta:msg.replace(/^\/metas\s*/i,"")).slice(0,160); if(S.metas.filter(x=>x.estado==="em curso").length<3) S.metas.push({texto:t,progresso:0,estado:"em curso",nota:""}); }
+  if(intent&&intent.tipo==="resposta"&&!$("input").dataset.resp) $("input").dataset.resp=intent.carta.id;
+  S._comandoTxt=intent?(intent.tipo==="ato"?`a jogada é um ato do pontificado: ${intent.titulo} (${intent.instrumento}${intent.cmd?`, comando ${intent.cmd}`:""}). Siga o protocolo da seção 6 (instrumento adequado, trâmite, minuta como rascunho submetido ao Papa) e registre-o em "atos" com titulo, instrumento, estado e grau.`:intent.tipo==="resposta"?`a jogada responde por escrito à ${intent.carta.tipo} de ${intent.carta.de} (${intent.carta.data}): "${intent.carta.texto.slice(0,200)}". Quem escreveu reage à resposta.`:`a jogada equivale ao comando ${intent.cmd}; siga o protocolo desse comando (seção 8) sem deixar de responder ao que o Papa escreveu.`):"";
   const anc=escolherAncora(msg); const evt=anc?null:escolherEvento(msg); S._ancoraTxt=anc?anc.t:(evt?evt.t:"");
-  const P=buildTurn(msg,pool); delete S._ancoraTxt;
+  const P=buildTurn(msg,pool); delete S._ancoraTxt; delete S._comandoTxt;
   S.uso.bytesUltimo=P.bytes; S.uso.nivelUltimo=P.nivel;
   const rid=$("input").dataset.resp;
   if(rid){ const m=S.caixa.find(x=>x.id===rid); if(m) m.resposta=msg.replace(/^Respondo por escrito[^:]*:\s*/i,"").slice(0,400)||msg.slice(0,400); delete $("input").dataset.resp; }
   S.log.push({r:"p",t:msg}); $("input").value="";
+  if(intent) S.log.push({r:"s",t:`Reconhecido como ${intent.rotulo}${intent.tipo==="ato"?": o ato vai para a aba Atos":""}.`});
   renderLog();
   const live=el("div",{class:"msg-n"}); $("log").appendChild(live);
   live.scrollIntoView({block:"start"});
   setBusy(true); startTimer($("sendStatus"),["O mundo reage…","A notícia corre pelos corredores…","Os conselheiros pesam a decisão…","Roma comenta…","Os mensageiros partem…"][Math.floor(Math.random()*5)]);
-  ctl=new AbortController();
+  const meu=ctl=new AbortController();
   try{
     const res=await llm(P,{modelTier:"default",cache:false,signal:ctl.signal,onText:({text})=>{ if(timer){ stopTimer(); $("sendStatus").textContent="Narrando…"; } renderNarr(live,text.split(SEP)[0]); }});
+    if(ger!==espacoGer) return;
     const text=res.text; contarUso(res,P.bytes);
     stopTimer();
     let {narr,json,opcoesTexto,cortado}=lerResposta(text); let reparado=false;
-    if(!json&&narr.trim()){ $("sendStatus").textContent="Reconstruindo o estado da narração…"; json=await repararEstado(narr); reparado=!!json; }
+    if(!json&&narr.trim()){ $("sendStatus").textContent="Reconstruindo o estado da narração…"; json=await repararEstado(narr); reparado=!!json; if(ger!==espacoGer) return; }
     PREV=snap; S.opcoes=[];
     S.log.push({r:"n",t:narr.trim()});
     S.nresp=(S.nresp||0)+1;
@@ -2060,7 +2181,9 @@ async function send(forcedPool){
     if(evt){ S.eventosUsados=S.eventosUsados||{}; S.eventosUsados[evt.id]=S.nresp; S.ultimoEvento=S.nresp; if(author) S.log.push({r:"s",t:`Semente de evento proposta ao narrador: ${evt.id}.`}); }
     marcarVistos(msg+"\n"+narr);
     const fimAntes=!!S.fim;
+    const nAtos=S.atos.length;
     const notices=applyState(json,pool);
+    if(intent&&intent.tipo==="ato"&&S.atos.length===nAtos&&!S.atos.some(a=>_sa(a.titulo)===_sa(intent.titulo))){ S.atos.push({titulo:intent.titulo,instrumento:intent.instrumento,estado:intent.estado,grau:"",data:S.data_iso||""}); notices.push(`Ato registrado: ${intent.titulo} (${intent.estado}).`); }
     if(!fimAntes&&S.fim){ setTimeout(()=>cerimonia("sede"),300); conq(c=>{ c.fins=(c.fins||0)+1; }); }
     if(foraDaFiccao && !(S.opcoes||[]).length) S.opcoes=opcoesAntes; else completarOpcoes(opcoesTexto);
     if(!json) S.log.push({r:"s",t:"O estado do jogo não foi atualizado nesta resposta."});
@@ -2068,17 +2191,19 @@ async function send(forcedPool){
     else if(cortado) S.log.push({r:"s",t:"O bloco de estado veio cortado no fim; o que chegou foi aproveitado."});
     if(notices.length) S.log.push({r:"s",t:"Painel: "+notices.join(" ")});
     if(S.log.length>300) S.log=S.log.slice(-300);
-    save(); $("sendStatus").textContent=""; render();
+    save(); if(!semEspaco) $("sendStatus").textContent=""; render();
     if(S.resumos.length-(S.consolidadoAte||0)>=15) consolidar();
     { const n0=S.feitosOk.length; checarFeitos(); if(S.feitosOk.length>n0){ save(); renderLog(); } }
   }catch(e){
+    /* a partida mudou enquanto a resposta vinha: a antiga volta ao ponto de antes da jogada, a nova não é tocada */
+    if(ger!==espacoGer){ try{ if(localStorage.getItem(chave)!=null) localStorage.setItem(chave,snap); }catch(_){} return; }
     stopTimer(); $("sendStatus").textContent=errCopy(e);
     const keep=e&&e.text?splitOut(e.text).narr.trim():"";
     S=JSON.parse(snap);
     if(keep){ S.log.push({r:"p",t:msg}); S.log.push({r:"n",t:keep}); S.log.push({r:"s",t:"Resposta incompleta; o estado não foi atualizado."}); save(); }
     else { $("input").value=msg; if(rid) $("input").dataset.resp=rid; }
     render();
-  }finally{ setBusy(false); ctl=null; }
+  }finally{ if(ctl===meu){ ctl=null; setBusy(false); } if(ger!==espacoGer) stopTimer(); }
 }
 /* bastidores: mundo em segundo plano e mentes do elenco, pedidos à parte (só JSON) depois da primeira cena,
    para que a resposta que abre a partida não estoure o tamanho e perca as opções */
@@ -2181,7 +2306,7 @@ $("btnUndo").onclick=()=>{
 };
 $("btnReset").onclick=()=>{
   if(!confirm("Encerrar este pontificado e voltar à sessão zero? Tudo será apagado; gere o bloco de estado antes, se quiser guardar.")) return;
-  S=null; PREV=null; ZPRESET=null; try{ localStorage.removeItem(KEY); localStorage.removeItem(KEY+"-prev"); }catch(e){} limparSessaoZero(); render(); window.scrollTo(0,0);
+  novaGeracao(); S=null; PREV=null; ZPRESET=null; try{ localStorage.removeItem(KEY); localStorage.removeItem(KEY+"-prev"); }catch(e){} limparSessaoZero(); render(); window.scrollTo(0,0);
 };
 
 /* ---------- /salvar ---------- */
@@ -2341,11 +2466,11 @@ Regras: português do Brasil; linguagem sóbria e precisa, sem melodrama; nunca 
 DADOS DO JOGO
 ${dados}`;
   const box=el("div",{class:"msg-n"}); $("log").appendChild(box); scrollLog();
-  $("btnLegado").disabled=true; startTimer($("sendStatus"),"O narrador escreve o legado…");
-  try{ const r=await llm(prompt.slice(0,PROMPT_LIMIT),{modelTier:"default",cache:false,onText:({text})=>{ stopTimer(); renderNarr(box,text); }}); stopTimer(); contarUso(r,bytes(prompt));
+  $("btnLegado").disabled=true; startTimer($("sendStatus"),"O narrador escreve o legado…"); const ger=espacoGer;
+  try{ const r=await llm(prompt.slice(0,PROMPT_LIMIT),{modelTier:"default",cache:false,onText:({text})=>{ stopTimer(); renderNarr(box,text); }}); stopTimer(); if(ger!==espacoGer) return; contarUso(r,bytes(prompt));
     const novo=!S.legado; S.legado=String(r.text||"").trim(); S.log.push({r:"n",t:S.legado}); save(); render(); scrollLog(); $("sendStatus").textContent="";
     if(novo) conq(c=>{ c.legados=(c.legados||0)+1; }); }
-  catch(e){ stopTimer(); box.remove(); $("sendStatus").textContent=errCopy(e); }
+  catch(e){ stopTimer(); box.remove(); if(ger===espacoGer) $("sendStatus").textContent=errCopy(e); }
   finally{ if($("btnLegado")) $("btnLegado").disabled=false; }
 }
 /* sucessão: o mundo é herdado; o eleito pode ser um cardeal do elenco ou uma surpresa do conclave */
@@ -2403,14 +2528,15 @@ O usuário passa a jogar o novo Papa; nunca decida por ele.
 
 ${OUT_RULES}
 Neste JSON, comece por "data", "data_iso", "resumo" e "opcoes", e envie em frases curtas: "eleicao", "papa" com os dados finais do novo Papa (nome, nome_papal, nacionalidade, idade, saude, formacao, cargos, linguas, lema, residencia, rito), "atributos" (os cinco somando 15, pela trajetória dele), "vida_espiritual" inicial, os ajustes de "painel" e "painel_real" da transição, "personagens" com as mudanças de cargo (os chefes de dicastério cessaram e aguardam confirmação; quem o novo Papa traz; o eleito NÃO entra em personagens), as "conclusao" iniciais dos principais sobre o novo Papa, "relacoes" novas do novo Papa (o Papa é "Papa"), "agenda" dos primeiros dias, "pendencias", "registro", "rumores" e "opcoes".`;
-  $("btnSucGo").disabled=true; startTimer($("sucStatus"),"Sé vacante; o conclave se reúne…");
+  $("btnSucGo").disabled=true; startTimer($("sucStatus"),"Sé vacante; o conclave se reúne…"); const ger=espacoGer;
   const box=el("div",{class:"msg-n"}); $("log").appendChild(box);
   try{
     const r=await llm(prompt,{modelTier:"default",cache:false,onText:({text})=>{ stopTimer(); $("sucStatus").textContent="Escrevendo…"; renderNarr(box,text.split(SEP)[0]); }});
-    stopTimer(); contarUso(r,bytes(prompt));
+    stopTimer(); if(ger!==espacoGer){ box.remove(); return; } contarUso(r,bytes(prompt));
     let {narr,json,opcoesTexto}=lerResposta(r.text||"");
     S=N; PREV=null;
     if(!json&&narr.trim()) json=await repararEstado(narr);
+    if(ger!==espacoGer) return;
     if(json&&Array.isArray(json.personagens)) json.personagens=json.personagens.filter(x=>x&&x.nome!==esc);
     applyState(json||{}); completarOpcoes(opcoesTexto);
     if(!S.eleicao) S.eleicao=S.data_iso;
@@ -2421,7 +2547,7 @@ Neste JSON, comece por "data", "data_iso", "resumo" e "opcoes", e envie em frase
     save(); tab="cena"; render(); scrollLog();
     if(!conclave) cerimonia("habemus");
     conq(c=>{ c.inicios=(c.inicios||0)+1; c.dinastiaMax=Math.max(c.dinastiaMax||0,S.dinastia.length); });
-  }catch(e){ stopTimer(); box.remove(); S=old; if($("sucStatus")) $("sucStatus").textContent=errCopy(e); if($("btnSucGo")) $("btnSucGo").disabled=false; }
+  }catch(e){ stopTimer(); box.remove(); if(ger!==espacoGer) return; S=old; if($("sucStatus")) $("sucStatus").textContent=errCopy(e); if($("btnSucGo")) $("btnSucGo").disabled=false; }
 }
 function renderMetas(){
   const w=$("metasList"); w.innerHTML="";
@@ -2601,8 +2727,16 @@ function renderForces(){
 }
 function renderFaccoesList(){
   document.querySelectorAll("#forceLayers button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.f===forceMode)));
+  const modoF=forceMode==="faccoes"; $("facPainel").classList.toggle("hidden",!modoF); $("pesPainel").classList.toggle("hidden",modoF);
   const fl=$("faccoesList"); fl.innerHTML="";
-  if(forceMode==="faccoes") S.faccoes.forEach(f=>{ const d=el("div",{class:"item fac clicavel"}); d.onclick=()=>abrirFicha("f",f.nome); d.appendChild(emblemaFaccao(f,34)); const t=el("div",{class:"t"}); t.appendChild(linkNome(f.nome)); t.appendChild(el("span",{class:"badge"},`força ${LV[f.forca]}`)); t.appendChild(el("span",{class:"badge "+(f.atitude>=4?"b-good":f.atitude<=2?"b-bad":"")},ATIT[f.atitude])); d.appendChild(t); if(f.pauta) d.appendChild(el("div",{class:"s"},f.pauta)); if(f.lideres) d.appendChild(el("div",{class:"s"},"Figuras: "+f.lideres)); fl.appendChild(d); });
+  if(!modoF) return;
+  S.faccoes.forEach(f=>{ const d=el("div",{class:"item fac clicavel"}); d.onclick=()=>abrirFicha("f",f.nome); d.appendChild(emblemaFaccao(f,34)); const t=el("div",{class:"t"}); t.appendChild(linkNome(f.nome));
+    t.appendChild(el("span",{class:"badge"},`força ${LV[f.forca]}`)); t.appendChild(el("span",{class:"badge "+(f.atitude>=4?"b-good":f.atitude<=2?"b-bad":"")},ATIT[f.atitude])); d.appendChild(t);
+    if(f.pauta) d.appendChild(el("div",{class:"s"},f.pauta)); if(f.lideres) d.appendChild(el("div",{class:"s"},"Figuras: "+f.lideres));
+    const outras=S.faccoes.filter(x=>x!==f), prox=outras.filter(x=>(opiniao(f,x)??3)>=4).map(x=>nomeCurtoFac(x.nome)), atr=outras.filter(x=>(opiniao(f,x)??3)<=2).map(x=>nomeCurtoFac(x.nome));
+    if(prox.length||atr.length) d.appendChild(el("div",{class:"s"},[prox.length?`Próxima de: ${prox.join(", ")}`:"",atr.length?`Em atrito com: ${atr.join(", ")}`:""].filter(Boolean).join(" · ")));
+    fl.appendChild(d); });
+  renderFacMatriz();
 }
 function renderNet(){
   const svg=d3.select("#netSvg"); svg.selectAll("*").remove();
@@ -2655,7 +2789,6 @@ function renderElenco(){
     w.appendChild(d);
   });
   if(fora.length){ w.appendChild(el("div",{class:"sub"},"Fora de cena")); fora.forEach(p=>{ const d=el("div",{class:"item s clicavel"}); d.onclick=()=>abrirFicha("p",p.nome); d.appendChild(linkNome(p.nome)); d.appendChild(document.createTextNode(`, ${p.cargo}. ${p.nota||""}`)); w.appendChild(d); }); }
-  renderFacMatriz();
 }
 function renderConsumo(){
   const U=S.uso, w=$("consumo"); w.innerHTML="";
@@ -2714,7 +2847,7 @@ function proximoToast(){
   const w=el("div",{class:"toast",role:"status","aria-live":"polite"}); const i=el("div",{class:"toast-ic"}); i.appendChild(ic(x.icn||"trofeu",26)); w.appendChild(i);
   const c=el("div"); c.appendChild(el("small",{},x.tipo)); c.appendChild(el("b",{},x.titulo)); if(x.desc) c.appendChild(el("span",{},x.desc)); w.appendChild(c);
   const fim=()=>{ if(!w.isConnected) return; w.classList.add("sai"); setTimeout(()=>{ w.remove(); TOASTS.shift(); proximoToast(); },300); };
-  w.onclick=fim; document.body.appendChild(w); setTimeout(fim,4800);
+  w.onclick=fim; document.body.appendChild(w); setTimeout(fim,TOASTS.length>1?2600:4800);
 }
 function checarFeitos(){
   const novos=feitosDe(S).filter(f=>f.ok&&!S.feitosOk.includes(f.id));
@@ -3228,7 +3361,7 @@ $("btnGuiaReset").onclick=()=>{ try{ localStorage.removeItem(GUIA_KEY); }catch(e
    ===================================================================== */
 const VIEWS=["home","quickScreen","importScreen","settings","papado"];
 function show(v){
-  VIEWS.forEach(id=>$(id).classList.toggle("hidden",id!==v));
+  VIEWS.forEach(id=>$(id).classList.toggle("hidden",id!==v)); document.body.classList.toggle("em-jogo",v==="papado");
   if(v==="home"){ menu(null); renderHome(); renderMenuTopo(); }
   if(v==="papado"){ render(); if(S) prepararBastidores(); }
   if(v==="settings"){ seedInfo(); connUI(); }
@@ -3257,7 +3390,7 @@ function renderHome(){
     const bar=el("div",{class:"bar"});
     const abrir=el("button",{type:"button",class:"small"},P?"Abrir":"Começar aqui"); abrir.onclick=()=>{ usarEspaco(n); show("papado"); };
     bar.appendChild(abrir);
-    if(P){ const del=el("button",{type:"button",class:"ghost small"},"Apagar"); del.onclick=()=>{ if(!confirm(`Apagar a partida do espaço ${n} (${P.papa.nome_papal||"pontificado"})? Não há como desfazer.`)) return; try{ localStorage.removeItem(keyDo(n)); localStorage.removeItem(keyDo(n)+"-prev"); localStorage.removeItem(keyDo(n)+"-anterior"); }catch(e){} if(n===SLOT){ S=null; PREV=null; } renderHome(); renderMenuTopo(); }; bar.appendChild(del); }
+    if(P){ const del=el("button",{type:"button",class:"ghost small"},"Apagar"); del.onclick=()=>{ if(!confirm(`Apagar a partida do espaço ${n} (${P.papa.nome_papal||"pontificado"})? Não há como desfazer.`)) return; try{ localStorage.removeItem(keyDo(n)); localStorage.removeItem(keyDo(n)+"-prev"); localStorage.removeItem(keyDo(n)+"-anterior"); }catch(e){} if(n===SLOT){ novaGeracao(); S=null; PREV=null; } renderHome(); renderMenuTopo(); }; bar.appendChild(del); }
     card.appendChild(bar); list.appendChild(card);
   }
   $("continueWrap").classList.remove("hidden");
