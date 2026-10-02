@@ -682,6 +682,7 @@ dialog.ficha{width:min(94vw,600px);padding:0;overflow:hidden}
     <section><h2>O Papa</h2><div id="papaFicha"></div></section>
     <section><h2>Metas do pontificado</h2><div id="metasList"></div></section>
     <section><h2>Painel do pontificado</h2><div id="indicators"></div></section>
+    <section><h2>Igrejas católicas orientais</h2><p class="note">As Igrejas sui iuris em plena comunhão com Roma: são a Igreja Católica, com rito, hierarquia e sínodo próprios. A sintonia de cada uma com Roma pesa na unidade; toque numa para ver a ficha e receber o seu patriarca ou arcebispo.</p><div id="orientais"></div></section>
     <section>
       <h2>Mapa</h2>
       <div class="layers" id="layers">
@@ -870,7 +871,8 @@ function pesosEra(iso){
 }
 /* nomes comparados sem maiúsculas, acentos ou espaços duplicados */
 const _n=x=>String(x||"").toLowerCase().replace(/\s+/g," ").trim();
-const _sa=x=>_n(x).normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+const _SA=new Map();
+const _sa=x=>{ const k=String(x||""); let v=_SA.get(k); if(v===undefined){ v=_n(k).normalize("NFD").replace(/[\u0300-\u036f]/g,""); if(_SA.size>30000) _SA.clear(); _SA.set(k,v); } return v; };
 /* ---------- Igrejas e religiões: o quadro completo, com início, fim, nomes e líderes por época ----------
    n nome atual; f família; l líder (cargo); d desde (ano); a até (ano em que deixa de existir); h nomes anteriores [ano, nome, líder] (valem antes do ano);
    tf família anterior [ano, família]; k chaves de reconhecimento (minúsculas, sem acento); auto: as mudanças de nome são só nominais e o app as aplica sozinho;
@@ -879,11 +881,11 @@ const FAMILIAS=[["ortodoxa","Ortodoxas bizantinas"],["ortodoxa não canônica","
 const PRE_CISMA="Igrejas do Oriente (em comunhão com Roma)";
 const IGREJAS_CAT=[
 /* ortodoxas bizantinas */
-{n:"Patriarcado Ecumênico de Constantinopla",f:"ortodoxa",l:"Patriarca Ecumênico",d:330,h:[[451,"Igreja de Constantinopla","Bispo de Constantinopla"]],auto:1,k:["constantinopla","patriarca ecumenico","patriarcado ecumenico","fanar"]},
+{n:"Patriarcado Ecumênico de Constantinopla",f:"ortodoxa",l:"Patriarca Ecumênico",d:330,h:[[451,"Igreja de Constantinopla","Bispo de Constantinopla"]],auto:1,inc:[[963,"Monte Atos"],[1900,"Igreja de Creta (semiautônoma)"],[1923,"Igreja Ortodoxa da Finlândia (autônoma)"],[1923,"Igreja Ortodoxa Apostólica Estoniana (autônoma; restaurada em 1996)"]],k:["constantinopla","patriarca ecumenico","patriarcado ecumenico","fanar","igreja ortodoxa da finlandia","ortodoxos finlandeses","ortodoxa apostolica estoniana","monte atos"]},
 {n:"Patriarcado Ortodoxo Grego de Alexandria",f:"ortodoxa",l:"Patriarca grego de Alexandria e de Toda a África",d:451,por:"a sé de Alexandria se divide depois de Calcedônia",k:["patriarcado grego de alexandria","patriarca grego de alexandria","ortodoxos de alexandria"]},
 {n:"Patriarcado Ortodoxo Grego de Antioquia",f:"ortodoxa",l:"Patriarca grego de Antioquia",d:37,h:[[451,"Igreja de Antioquia","Bispo de Antioquia"]],k:["patriarcado grego de antioquia","patriarca grego de antioquia","ortodoxos de antioquia","igreja de antioquia"]},
-{n:"Patriarcado Ortodoxo Grego de Jerusalém",f:"ortodoxa",l:"Patriarca grego de Jerusalém",d:135,h:[[451,"Igreja de Jerusalém","Bispo de Jerusalém"]],k:["patriarcado grego de jerusalem","patriarca grego de jerusalem","patriarcado ortodoxo de jerusalem","patriarca ortodoxo de jerusalem","igreja de jerusalem"]},
-{n:"Patriarcado de Moscou",f:"ortodoxa",l:"Patriarca de Moscou",d:1448,h:[[1589,"Metropolia de Moscou","Metropolita de Moscou"],[1721,"Patriarcado de Moscou","Patriarca de Moscou"],[1917,"Igreja Ortodoxa Russa (Santo Sínodo)","Santo Sínodo (sob o czar)"]],k:["patriarca de moscou","patriarcado de moscou","metropolia de moscou","igreja ortodoxa russa","igreja russa","ortodoxos russos"]},
+{n:"Patriarcado Ortodoxo Grego de Jerusalém",f:"ortodoxa",l:"Patriarca grego de Jerusalém",d:135,h:[[451,"Igreja de Jerusalém","Bispo de Jerusalém"]],k:["patriarcado grego de jerusalem","patriarca grego de jerusalem","patriarcado ortodoxo de jerusalem","patriarca ortodoxo de jerusalem","igreja de jerusalem","arcebispado do sinai","mosteiro de santa catarina"],inc:[[1575,"Arcebispado do Sinai (Santa Catarina; autônomo)"]]},
+{n:"Patriarcado de Moscou",f:"ortodoxa",l:"Patriarca de Moscou",d:1448,h:[[1589,"Metropolia de Moscou","Metropolita de Moscou"],[1721,"Patriarcado de Moscou","Patriarca de Moscou"],[1917,"Igreja Ortodoxa Russa (Santo Sínodo)","Santo Sínodo (sob o czar)"]],inc:[[1970,"Igreja Ortodoxa do Japão (autônoma)"],[2007,"Igreja Ortodoxa Russa no Exterior (ROCOR; autônoma desde a reunificação)"]],k:["patriarca de moscou","patriarcado de moscou","metropolia de moscou","igreja ortodoxa russa","igreja russa","ortodoxos russos","igreja ortodoxa do japao"]},
 {n:"Patriarcado da Sérvia",f:"ortodoxa",l:"Patriarca da Sérvia",d:1219,h:[[1346,"Arcebispado autocéfalo da Sérvia","Arcebispo da Sérvia"],[1766,"Patriarcado de Peć","Patriarca de Peć"],[1920,"Igreja Ortodoxa Sérvia (metropolias de Karlovci e Belgrado)","Metropolitas sérvios"]],k:["patriarca da servia","patriarcado da servia","igreja ortodoxa servia","ortodoxos servios","patriarcado de pec"]},
 {n:"Patriarcado da Romênia",f:"ortodoxa",l:"Patriarca da Romênia",d:1885,h:[[1925,"Igreja Ortodoxa Romena","Metropolita primaz da Romênia"]],k:["patriarca da romenia","patriarcado da romenia","igreja ortodoxa romena","ortodoxos romenos"]},
 {n:"Patriarcado da Bulgária",f:"ortodoxa",l:"Patriarca da Bulgária",d:1870,h:[[1953,"Exarcado Búlgaro","Exarca búlgaro"]],k:["patriarca da bulgaria","patriarcado da bulgaria","exarcado bulgaro","igreja ortodoxa bulgara","ortodoxos bulgaros"]},
@@ -893,32 +895,26 @@ const IGREJAS_CAT=[
 {n:"Igreja Ortodoxa da Polônia",f:"ortodoxa",l:"Metropolita de Varsóvia",d:1924,k:["igreja ortodoxa da polonia","ortodoxos poloneses","metropolita de varsovia"]},
 {n:"Igreja Ortodoxa da Albânia",f:"ortodoxa",l:"Arcebispo de Tirana",d:1937,k:["igreja ortodoxa da albania","ortodoxos albaneses","arcebispo de tirana"]},
 {n:"Igreja Ortodoxa das Terras Tchecas e da Eslováquia",f:"ortodoxa",l:"Metropolita das Terras Tchecas e da Eslováquia",d:1951,k:["igreja ortodoxa das terras tchecas","ortodoxos tchecos"]},
-{n:"Igreja Ortodoxa da Ucrânia",f:"ortodoxa",l:"Metropolita de Kiev e de Toda a Ucrânia",d:2018,por:"concílio de unificação e tomos de autocefalia de Constantinopla",k:["igreja ortodoxa da ucrania","metropolita de kiev e de toda a ucrania"]},
+{n:"Igreja Ortodoxa da Ucrânia",f:"ortodoxa",l:"Metropolita de Kiev e de Toda a Ucrânia",d:2018,por:"concílio de unificação e tomos de autocefalia de Constantinopla",inc:[[2018,"o antigo Patriarcado de Kiev e a Igreja Autocéfala Ucraniana, unidos no concílio"]],k:["igreja ortodoxa da ucrania","metropolita de kiev e de toda a ucrania"]},
 {n:"Igreja Ortodoxa Ucraniana (ligada a Moscou)",f:"ortodoxa",l:"Metropolita de Kiev (ligado a Moscou)",d:1990,k:["igreja ortodoxa ucraniana","ucraniana ligada a moscou"]},
 {n:"Igreja Ortodoxa Macedônia (Arcebispado de Ohrid)",f:"ortodoxa",l:"Arcebispo de Ohrid e da Macedônia",d:1967,h:[[2022,"Igreja Ortodoxa Macedônia (não reconhecida)","Arcebispo de Ohrid e da Macedônia"]],k:["igreja ortodoxa macedonia","arcebispado de ohrid","arcebispo de ohrid"]},
 {n:"Igreja Ortodoxa na América (OCA)",f:"ortodoxa",l:"Metropolita de Toda a América e Canadá",d:1970,k:["igreja ortodoxa na america"]},
-{n:"Igreja Ortodoxa Russa no Exterior (ROCOR)",f:"ortodoxa",l:"Primeiro-hierarca da ROCOR",d:1920,k:["russa no exterior","rocor"]},
-{n:"Igreja Ortodoxa da Finlândia",f:"ortodoxa",l:"Arcebispo de Helsinque",d:1923,k:["igreja ortodoxa da finlandia","ortodoxos finlandeses"]},
-{n:"Igreja Ortodoxa Apostólica Estoniana",f:"ortodoxa",l:"Metropolita de Tallinn",d:1923,k:["ortodoxa apostolica estoniana","ortodoxos estonianos"]},
-{n:"Arcebispado do Sinai (Santa Catarina)",f:"ortodoxa",l:"Arcebispo do Sinai",d:1575,k:["arcebispado do sinai","mosteiro de santa catarina"]},
-{n:"Igreja Ortodoxa do Japão",f:"ortodoxa",l:"Metropolita de Tóquio",d:1970,k:["igreja ortodoxa do japao"]},
-{n:"Arcebispado de Ohrid (medieval)",f:"ortodoxa",l:"Arcebispo de Ohrid",d:1019,a:1767,fim:"abolido por Constantinopla sob pressão otomana",k:["arcebispado de ohrid","arcebispo de ohrid"]},
-{n:"Patriarcado de Tarnovo (Bulgária medieval)",f:"ortodoxa",l:"Patriarca de Tarnovo",d:1235,a:1393,fim:"Tarnovo cai sob os otomanos",k:["patriarcado de tarnovo","patriarca de tarnovo"]},
+{n:"Igreja Ortodoxa Russa no Exterior (ROCOR)",f:"ortodoxa",l:"Primeiro-hierarca da ROCOR",d:1920,a:2007,fim:"reunifica-se com o Patriarcado de Moscou (Ato de Comunhão Canônica), como parte autônoma",para:"Patriarcado de Moscou",k:["russa no exterior","rocor"]},
+{n:"Arcebispado de Ohrid (medieval)",f:"ortodoxa",l:"Arcebispo de Ohrid",d:1019,a:1767,fim:"abolido por Constantinopla sob pressão otomana",para:"Patriarcado Ecumênico de Constantinopla",k:["arcebispado de ohrid","arcebispo de ohrid"]},
+{n:"Patriarcado de Tarnovo (Bulgária medieval)",f:"ortodoxa",l:"Patriarca de Tarnovo",d:1235,a:1393,fim:"Tarnovo cai sob os otomanos e a Igreja búlgara passa a Constantinopla",para:"Patriarcado Ecumênico de Constantinopla",k:["patriarcado de tarnovo","patriarca de tarnovo"]},
 /* ortodoxas fora da comunhão canônica */
 {n:"Velhos Crentes (Velhos Ritualistas)",f:"ortodoxa não canônica",l:"Metropolita de Belaya Krinitsa e conselhos",d:1666,por:"rejeitam a reforma litúrgica do patriarca Nikon",k:["velhos crentes","velhos ritualistas"]},
 {n:"Velho-calendaristas (Igrejas Ortodoxas Genuínas)",f:"ortodoxa não canônica",l:"Sínodos velho-calendaristas",d:1924,por:"rejeitam o calendário juliano revisado adotado pela Igreja da Grécia",k:["velho-calendaristas","velhos calendaristas","ortodoxos genuinos","igrejas ortodoxas genuinas"]},
 {n:"Igreja Ortodoxa Montenegrina (não reconhecida)",f:"ortodoxa não canônica",l:"Metropolita montenegrino",d:1993,k:["igreja ortodoxa montenegrina"]},
-{n:"Igreja Ortodoxa Ucraniana do Patriarcado de Kiev",f:"ortodoxa não canônica",l:"Patriarca de Kiev (não reconhecido)",d:1992,a:2018,fim:"funde-se na Igreja Ortodoxa da Ucrânia",k:["patriarcado de kiev"]},
-{n:"Igreja Ortodoxa Autocéfala Ucraniana",f:"ortodoxa não canônica",l:"Primaz autocéfalo ucraniano",d:1990,a:2018,fim:"funde-se na Igreja Ortodoxa da Ucrânia",k:["ortodoxa autocefala ucraniana"]},
+{n:"Igreja Ortodoxa Ucraniana do Patriarcado de Kiev",f:"ortodoxa não canônica",l:"Patriarca de Kiev (não reconhecido)",d:1992,a:2018,fim:"funde-se na Igreja Ortodoxa da Ucrânia",para:"Igreja Ortodoxa da Ucrânia",k:["patriarcado de kiev"]},
+{n:"Igreja Ortodoxa Autocéfala Ucraniana",f:"ortodoxa não canônica",l:"Primaz autocéfalo ucraniano",d:1990,a:2018,fim:"funde-se na Igreja Ortodoxa da Ucrânia",para:"Igreja Ortodoxa da Ucrânia",k:["ortodoxa autocefala ucraniana"]},
 /* ortodoxas orientais */
 {n:"Igreja Copta Ortodoxa",f:"ortodoxa oriental",l:"Papa de Alexandria",d:42,h:[[451,"Igreja de Alexandria","Bispo de Alexandria"]],k:["igreja copta ortodoxa","coptas ortodoxos","papa copta","papa de alexandria","coptas","igreja de alexandria"]},
-{n:"Igreja Siríaca Ortodoxa",f:"ortodoxa oriental",l:"Patriarca siríaco ortodoxo de Antioquia",d:518,k:["igreja siriaca ortodoxa","siriacos ortodoxos","patriarca siriaco ortodoxo"]},
-{n:"Igreja Apostólica Armênia",f:"ortodoxa oriental",l:"Catholicos de Todos os Armênios",d:301,k:["igreja apostolica armenia","etchmiadzin","catholicos de todos os armenios","armenios apostolicos"]},
-{n:"Catolicosato Armênio da Cilícia",f:"ortodoxa oriental",l:"Catholicos da Grande Casa da Cilícia",d:1441,k:["catolicosato armenio da cilicia","catolicosato da cilicia","antelias","catholicos da cilicia"]},
+{n:"Igreja Siríaca Ortodoxa",f:"ortodoxa oriental",l:"Patriarca siríaco ortodoxo de Antioquia",d:518,inc:[[1975,"Igreja Cristã Síria Jacobita (Índia), sob o Catholicos da Índia"]],k:["igreja siriaca ortodoxa","siriacos ortodoxos","patriarca siriaco ortodoxo","siria jacobita","jacobitas","catholicos da india"]},
+{n:"Igreja Apostólica Armênia",f:"ortodoxa oriental",l:"Catholicos de Todos os Armênios",d:301,inc:[[1311,"Patriarcado Armênio de Jerusalém"],[1441,"Catolicosato da Grande Casa da Cilícia (Antelias), com jurisdição própria"],[1461,"Patriarcado Armênio de Constantinopla"]],k:["igreja apostolica armenia","etchmiadzin","catholicos de todos os armenios","armenios apostolicos","catolicosato armenio da cilicia","catolicosato da cilicia","antelias","catholicos da cilicia"]},
 {n:"Igreja Ortodoxa Etíope Tewahedo",f:"ortodoxa oriental",l:"Patriarca da Etiópia",d:330,h:[[1959,"Igreja Etíope (sob Alexandria)","Abuna (metropolita enviado por Alexandria)"]],k:["igreja ortodoxa etiope","etiope tewahedo","igreja etiope","patriarca da etiopia","abuna"]},
 {n:"Igreja Ortodoxa Eritreia Tewahedo",f:"ortodoxa oriental",l:"Patriarca da Eritreia",d:1993,por:"autocefalia concedida pela Igreja Copta depois da independência da Eritreia",k:["igreja ortodoxa eritreia","eritreia tewahedo","patriarca da eritreia"]},
 {n:"Igreja Ortodoxa Síria Malankara",f:"ortodoxa oriental",l:"Catholicos do Oriente",d:1912,k:["ortodoxa siria malankara","igreja ortodoxa indiana","catholicos do oriente"]},
-{n:"Igreja Cristã Síria Jacobita",f:"ortodoxa oriental",l:"Catholicos da Índia (sob o patriarca siríaco)",d:1975,por:"nova cisão entre os cristãos malankara",k:["siria jacobita","jacobitas"]},
 /* Igreja do Oriente */
 {n:"Igreja Assíria do Oriente",f:"igreja do oriente",l:"Catholicos-Patriarca assírio",d:410,h:[[1976,"Igreja do Oriente","Catholicos-Patriarca do Oriente"]],auto:1,k:["igreja assiria","assirios","igreja do oriente","catholicos-patriarca assirio"]},
 {n:"Antiga Igreja do Oriente",f:"igreja do oriente",l:"Catholicos-Patriarca da Antiga Igreja do Oriente",d:1968,por:"cisão sobre o calendário e a sucessão hereditária",k:["antiga igreja do oriente"]},
@@ -954,21 +950,18 @@ const IGREJAS_CAT=[
 {n:"Igreja Filipina Independente (Aglipayana)",f:"velho-católica e independente",l:"Obispo Máximo",d:1902,k:["filipina independente","aglipayana"]},
 /* anglicanas */
 {n:"Comunhão Anglicana (Canterbury)",f:"anglicana",l:"Arcebispo de Canterbury",d:1534,h:[[1867,"Igreja da Inglaterra (Canterbury)","Arcebispo de Canterbury"]],auto:1,papal:1,por:"o rei rompe com Roma depois que o Papa recusa anular o seu casamento",k:["canterbury","comunhao anglicana","igreja da inglaterra","anglicanos"]},
-{n:"Comunhão Anglicana Global (GAFCON)",f:"anglicana",l:"Presidente do Conselho Anglicano Global",d:2008,h:[[2025,"GAFCON (Conferência do Futuro Anglicano Global)","Presidente do Conselho de Primazes do GAFCON"]],k:["gafcon","comunhao anglicana global","conselho anglicano global"]},
-{n:"Igreja Anglicana na América do Norte (ACNA)",f:"anglicana",l:"Arcebispo da ACNA",d:2009,k:["anglicana na america do norte","acna"]},
-{n:"Anglicanos continuantes (Congresso de St. Louis)",f:"anglicana",l:"Arcebispos das jurisdições continuantes",d:1977,por:"saem da Igreja Episcopal contra a ordenação de mulheres",k:["anglicanos continuantes","congresso de st. louis"]},
-{n:"Comunhão Anglicana Tradicional (TAC)",f:"anglicana",l:"Primaz da TAC",d:1991,k:["comunhao anglicana tradicional"]},
+{n:"Comunhão Anglicana Global (GAFCON)",f:"anglicana",l:"Presidente do Conselho Anglicano Global",d:2008,h:[[2025,"GAFCON (Conferência do Futuro Anglicano Global)","Presidente do Conselho de Primazes do GAFCON"]],inc:[[2008,"províncias do Sul Global (Nigéria, Uganda, Quênia, Ruanda e outras)"],[2009,"Igreja Anglicana na América do Norte (ACNA)"]],k:["gafcon","comunhao anglicana global","conselho anglicano global","anglicana na america do norte","acna"]},
+{n:"Anglicanos continuantes (Congresso de St. Louis)",f:"anglicana",l:"Arcebispos das jurisdições continuantes",d:1977,por:"saem da Igreja Episcopal contra a ordenação de mulheres",inc:[[1977,"Igreja Anglicana Católica e outras jurisdições"],[1991,"Comunhão Anglicana Tradicional (TAC)"]],k:["anglicanos continuantes","congresso de st. louis","comunhao anglicana tradicional"]},
 /* protestantes */
 {n:"Federação Luterana Mundial",f:"protestante",l:"Presidente e Secretário-geral",d:1517,h:[[1947,"Igrejas luteranas","Bispos e superintendentes luteranos"]],auto:1,por:"as teses de Lutero e a ruptura que se segue",k:["federacao luterana","luteranos","igrejas luteranas","igreja luterana"]},
-{n:"Comunhão Mundial de Igrejas Reformadas",f:"protestante",l:"Presidente",d:1523,h:[[1875,"Igrejas reformadas (calvinistas)","Sínodos reformados"],[2010,"Aliança Reformada Mundial","Presidente"]],auto:1,k:["igrejas reformadas","reformados","calvinistas","presbiterianos","alianca reformada"]},
+{n:"Comunhão Mundial de Igrejas Reformadas",f:"protestante",l:"Presidente",d:1523,h:[[1875,"Igrejas reformadas (calvinistas)","Sínodos reformados"],[2010,"Aliança Reformada Mundial","Presidente"]],auto:1,inc:[[1532,"Igreja Valdense (aderiu à Reforma em 1532; unida aos metodistas na Itália desde 1975)"],[1560,"Igrejas presbiterianas"]],k:["igrejas reformadas","reformados","calvinistas","presbiterianos","alianca reformada"]},
 {n:"Conselho Metodista Mundial",f:"protestante",l:"Presidente",d:1739,h:[[1881,"Metodistas","Conferência metodista"]],auto:1,k:["metodistas","conselho metodista","igreja metodista"]},
 {n:"Aliança Batista Mundial",f:"protestante",l:"Presidente e Secretário-geral",d:1609,h:[[1905,"Igrejas batistas","Associações batistas"]],auto:1,k:["batistas","alianca batista","igreja batista"]},
 {n:"Conferência Menonita Mundial",f:"protestante",l:"Presidente",d:1525,h:[[1925,"Anabatistas e menonitas","Anciãos anabatistas"]],auto:1,k:["menonitas","anabatistas"]},
 {n:"Igreja Adventista do Sétimo Dia",f:"protestante",l:"Presidente da Conferência Geral",d:1863,k:["adventistas","adventista do setimo dia"]},
-{n:"Igreja Valdense",f:"protestante",tf:[[1532,"dissidência antiga ou medieval"]],l:"Moderador da Mesa Valdense",d:1173,h:[[1532,"Valdenses (Pobres de Lyon)","Barbas valdenses"]],auto:1,k:["valdenses","igreja valdense","pobres de lyon"]},
 /* evangélicas e pentecostais */
-{n:"Aliança Evangélica Mundial e pentecostais",f:"evangélica e pentecostal",l:"Secretário-geral",d:1846,h:[[1906,"Aliança Evangélica","Secretário-geral"]],auto:1,k:["alianca evangelica","evangelicos","pentecostais"]},
-{n:"Assembleias de Deus",f:"evangélica e pentecostal",l:"Convenções nacionais",d:1911,k:["assembleia de deus","assembleias de deus"]},
+{n:"Aliança Evangélica Mundial",f:"evangélica e pentecostal",l:"Secretário-geral",d:1846,h:[[1951,"Aliança Evangélica","Secretário-geral"],[2001,"Fraternidade Evangélica Mundial","Secretário-geral"]],auto:1,inc:[[1846,"alianças evangélicas nacionais"]],k:["alianca evangelica","evangelicos","fraternidade evangelica"]},
+{n:"Fraternidade Pentecostal Mundial",f:"evangélica e pentecostal",l:"Presidente da Fraternidade",d:1906,h:[[1947,"Movimento pentecostal","Pastores e evangelistas pentecostais"],[2004,"Conferência Pentecostal Mundial","Presidente da Conferência"]],auto:1,por:"o avivamento da Rua Azusa, em Los Angeles",inc:[[1911,"Assembleias de Deus"],[1923,"Igreja do Evangelho Quadrangular"]],k:["pentecostais","pentecostalismo","fraternidade pentecostal","assembleia de deus","assembleias de deus"]},
 {n:"Igreja Universal do Reino de Deus",f:"evangélica e pentecostal",l:"Bispo fundador e conselho de bispos",d:1977,k:["igreja universal","universal do reino de deus","iurd"]},
 /* organismos ecumênicos */
 {n:"Conselho Mundial de Igrejas",f:"organismo ecumênico",l:"Secretário-geral",d:1948,k:["conselho mundial de igrejas"]},
@@ -979,6 +972,7 @@ const IGREJAS_CAT=[
 /* dissidências antigas e medievais */
 {n:"Arianos (reinos godos e lombardos)",f:"dissidência antiga ou medieval",l:"Bispos arianos dos reis",d:341,a:700,fim:"os últimos reinos arianos se convertem à fé católica",k:["arianos","arianismo"]},
 {n:"Donatistas (África)",f:"dissidência antiga ou medieval",l:"Bispos donatistas",d:311,a:700,fim:"desaparecem com a conquista árabe do Norte da África",k:["donatistas"]},
+{n:"Valdenses (Pobres de Lyon)",f:"dissidência antiga ou medieval",l:"Barbas valdenses",d:1173,a:1532,fim:"aderem à Reforma no Sínodo de Chanforan e passam às Igrejas reformadas",para:"Comunhão Mundial de Igrejas Reformadas",k:["valdenses","igreja valdense","pobres de lyon"]},
 {n:"Cátaros (albigenses)",f:"dissidência antiga ou medieval",l:"Bispos cátaros",d:1143,a:1321,fim:"extintos depois da cruzada e da inquisição",k:["cataros","albigenses"]},
 {n:"Hussitas (utraquistas e taboritas)",f:"dissidência antiga ou medieval",l:"Administradores utraquistas",d:1415,a:1620,fim:"derrotados na Montanha Branca; a Boêmia volta ao catolicismo",por:"a execução de Jan Hus no Concílio de Constança",k:["hussitas","utraquistas","taboritas"]},
 /* outros grupos de origem cristã */
@@ -999,7 +993,17 @@ const IGREJAS_CAT=[
 {n:"Religiões tradicionais africanas",f:"outras religiões",l:"Chefes e sacerdotes tradicionais",d:1491,k:["religioes tradicionais africanas"]},
 {n:"Zoroastrismo",f:"outras religiões",l:"Sumos sacerdotes (dasturs)",d:-600,k:["zoroastrismo","zoroastrianos","parsis","masdeismo"]}
 ];
-let IG_IDX=null; function igIdx(){ if(!IG_IDX){ IG_IDX=new Map(); IGREJAS_CAT.forEach(c=>{ IG_IDX.set(_sa(c.n),c); (c.h||[]).forEach(([,nm])=>{ if(!IG_IDX.has(_sa(nm))) IG_IDX.set(_sa(nm),c); }); }); } return IG_IDX; }
+/* entradas que saíram do quadro por fazerem parte de um grupo listado: o nome antigo leva ao grupo */
+const IG_ALIAS={"Igreja Ortodoxa da Finlândia":"Patriarcado Ecumênico de Constantinopla","Igreja Ortodoxa Apostólica Estoniana":"Patriarcado Ecumênico de Constantinopla","Arcebispado do Sinai (Santa Catarina)":"Patriarcado Ortodoxo Grego de Jerusalém","Igreja Ortodoxa do Japão":"Patriarcado de Moscou","Igreja Cristã Síria Jacobita":"Igreja Siríaca Ortodoxa","Catolicosato Armênio da Cilícia":"Igreja Apostólica Armênia","Igreja Anglicana na América do Norte (ACNA)":"Comunhão Anglicana Global (GAFCON)","Comunhão Anglicana Tradicional (TAC)":"Anglicanos continuantes (Congresso de St. Louis)","Assembleias de Deus":"Fraternidade Pentecostal Mundial","Aliança Evangélica Mundial e pentecostais":"Aliança Evangélica Mundial","Igreja Valdense":"Comunhão Mundial de Igrejas Reformadas"};
+let IG_IDX=null; function igIdx(){ if(!IG_IDX){ IG_IDX=new Map(); IGREJAS_CAT.forEach(c=>{ IG_IDX.set(_sa(c.n),c); (c.h||[]).forEach(([,nm])=>{ if(!IG_IDX.has(_sa(nm))) IG_IDX.set(_sa(nm),c); }); });
+  Object.entries(IG_ALIAS).forEach(([a,b])=>{ const c=IG_IDX.get(_sa(b)); if(c&&!IG_IDX.has(_sa(a))) IG_IDX.set(_sa(a),c); }); } return IG_IDX; }
+const igPorNome=n=>IGREJAS_CAT.find(c=>c.n===n)||null;
+/* tradição litúrgica das Igrejas católicas orientais (as demais são bizantinas) */
+const TRAD_OR={"Igreja Maronita":"antioquena","Igreja Siríaca Católica":"antioquena","Igreja Siro-Malankara Católica":"antioquena","Igreja Copta Católica":"alexandrina","Igreja Católica Etíope":"alexandrina","Igreja Católica Eritreia":"alexandrina","Igreja Armênia Católica":"armênia","Igreja Caldeia":"caldeia (siríaca oriental)","Igreja Siro-Malabar":"caldeia (siríaca oriental)"};
+const ORIENTAL="católica oriental", ehOriental=g=>!!g&&g.tipo===ORIENTAL;
+function tradOr(g){ const c=igCat(g); return (c&&TRAD_OR[c.n])||"bizantina"; }
+/* o que um grupo do quadro abrange num ano */
+function abrange(c,y){ return ((c&&c.inc)||[]).filter(([d])=>d<=y).map(([,t])=>t); }
 /* nome, líder e família de uma entrada do quadro num ano */
 function igNoAno(c,y){ const h=(c.h||[]).find(x=>y<x[0]); const t=(c.tf||[]).find(x=>y<x[0]);
   let tipo=t?t[1]:c.f; if((tipo==="ortodoxa"&&y<1054)||(tipo==="ortodoxa oriental"&&y<451)||(tipo==="igreja do oriente"&&y<424)) tipo=PRE_CISMA;
@@ -1037,7 +1041,6 @@ const LACOS_HIST=[
 ["Patriarcado Ecumênico de Constantinopla","Patriarcado da Bulgária","ruptura","1872","1945","cisma búlgaro"],
 ["Patriarcado da Sérvia","Igreja Ortodoxa Macedônia (Arcebispado de Ohrid)","ruptura","1967","2022-06","autocefalia macedônia não reconhecida"],
 ["Patriarcado de Moscou","Igreja Ortodoxa Russa no Exterior (ROCOR)","ruptura","1927","2007-05","a ROCOR rejeita a declaração de lealdade ao regime soviético"],
-["Patriarcado de Moscou","Igreja Ortodoxa Russa no Exterior (ROCOR)","comunhão","2007-05","","reunificação"],
 ["Patriarcado Ecumênico de Constantinopla","Igreja Ortodoxa na América (OCA)","tensão","1970","","Constantinopla não reconhece a autocefalia dada por Moscou"],
 ["Patriarcado de Moscou","Velhos Crentes (Velhos Ritualistas)","ruptura","1666","","cisma da reforma de Nikon; anátemas levantados em 1971"],
 ["Igreja da Grécia","Velho-calendaristas (Igrejas Ortodoxas Genuínas)","ruptura","1924","","disputa do calendário"],
@@ -1045,13 +1048,11 @@ const LACOS_HIST=[
 ["Igreja Ortodoxa da Ucrânia","Igreja Ortodoxa Ucraniana (ligada a Moscou)","rivalidade","2018-12","","disputa por paróquias, mosteiros e legitimidade"],
 ["Patriarcado de Moscou","Igreja Ortodoxa Ucraniana do Patriarcado de Kiev","ruptura","1992","2018-12","Moscou excomungou o patriarca de Kiev"],
 ["Igreja Assíria do Oriente","Antiga Igreja do Oriente","ruptura","1968","","cisma do calendário e da sucessão"],
-["Igreja Ortodoxa Síria Malankara","Igreja Cristã Síria Jacobita","rivalidade","1975","","disputa de igrejas e propriedades em Kerala"],
-["Igreja Ortodoxa Síria Malankara","Igreja Siríaca Ortodoxa","tensão","1975","","Antioquia não aceita a autocefalia do Catholicos do Oriente"],
+["Igreja Ortodoxa Síria Malankara","Igreja Siríaca Ortodoxa","rivalidade","1975","","o patriarca siríaco não aceita a autocefalia do Catholicos do Oriente; disputa de igrejas e propriedades em Kerala com a ala jacobita"],
 ["União de Utrecht (velho-católicos)","Comunhão Anglicana (Canterbury)","comunhão","1931","","Acordo de Bonn"],
 ["União de Scranton (Igreja Católica Nacional Polonesa)","União de Utrecht (velho-católicos)","ruptura","2003","","a Igreja Católica Nacional Polonesa deixa a União de Utrecht"],
 ["Igreja Filipina Independente (Aglipayana)","Comunhão Anglicana (Canterbury)","comunhão","1961","","concordata com a Igreja Episcopal"],
-["Comunhão Anglicana (Canterbury)","Comunhão Anglicana Global (GAFCON)","rivalidade","2008","","disputa sobre autoridade e moral sexual"],
-["Comunhão Anglicana (Canterbury)","Igreja Anglicana na América do Norte (ACNA)","rivalidade","2009","","separada da Igreja Episcopal dos Estados Unidos"],
+["Comunhão Anglicana (Canterbury)","Comunhão Anglicana Global (GAFCON)","rivalidade","2008","","disputa sobre autoridade e moral sexual; em 2009 nasce a ACNA, rival da Igreja Episcopal"],
 ["Comunhão Anglicana (Canterbury)","Anglicanos continuantes (Congresso de St. Louis)","ruptura","1977","","saíram contra a ordenação de mulheres"],
 ["Igreja Greco-Católica Ucraniana","Patriarcado de Moscou","rivalidade","1596","","uniatismo, liquidação forçada em 1946 e disputas de igrejas"],
 ["Igreja Greco-Católica Ucraniana","Igreja Ortodoxa Ucraniana (ligada a Moscou)","rivalidade","1990","","disputa de paróquias na Galícia"],
@@ -1367,7 +1368,12 @@ let IG_CHAVES=null;
 function igChave(k){ if(!IG_CHAVES){ IG_CHAVES=new Map(); const dup=new Set(); IGREJAS_CAT.forEach(c=>(c.k||[]).forEach(x=>{ if(IG_CHAVES.has(x)&&IG_CHAVES.get(x)!==c) dup.add(x); else IG_CHAVES.set(x,c); })); dup.forEach(x=>IG_CHAVES.delete(x)); } return IG_CHAVES.get(k)||null; }
 /* a Igreja do jogo pelo nome atual, por um nome de outra época ou por uma chave inequívoca do quadro ("Igreja Ortodoxa Russa") */
 function acharIgreja(nome){ if(!S||!nome) return null; const k=_sa(nome); if(!k) return null; const x=S.igrejas.find(g=>_sa(g.nome)===k); if(x) return x;
-  const c=igCat(String(nome))||igChave(k); return c?(S.igrejas.find(g=>g.cid===c.n||igCat(g)===c)||null):null; }
+  /* pelo nome (de qualquer época ou de um membro absorvido); se essa entrada não está no jogo, pela chave ("Igreja Valdense" em 1300 são os valdenses medievais) */
+  for(const c of [igCat(String(nome)),igChave(k)]){ if(!c) continue; const g=S.igrejas.find(g=>g.cid===c.n)||S.igrejas.find(g=>!g.cid&&igCat(g)===c); if(g) return g; } return null; }
+/* renomear, unir ou tirar uma Igreja exige um nome dela (o atual, o do quadro, um de outra época ou a sigla); uma chave ou o nome de um membro
+   ("ACNA", "Assembleias de Deus") serve para achar o grupo e mudar a relação, nunca para desfazê-lo */
+function nomeProprioIg(x,nome){ const k=_sa(nome); if(_sa(x.nome)===k) return true; const par=(String(x.nome).match(/\(([^)]+)\)/)||[])[1]; if(par&&_sa(par)===k) return true;
+  const c=igCat(x); return !!c&&!IG_ALIAS[nome]&&(_sa(c.n)===k||(c.h||[]).some(h=>_sa(h[1])===k)); }
 function acharEstado(nome){ if(!S||!nome) return null; const cn=_sa(estCanon(nome)); return Object.keys(S.estados).find(n=>_sa(n)===cn)||null; }
 function acharFaccaoExata(nome){ const k=_sa(nome); return S.faccoes.find(f=>_sa(f.nome)===k)||null; }
 /* uma entidade do mundo pelo nome: Igreja, Estado ou facção */
@@ -1415,7 +1421,7 @@ function aplicarLacos(lista,inicial,notices){ lista.forEach(l=>{ if(!l||!tx(l.a)
 function reagirLacos(subiram,tocados,notices){ if(!subiram.length||!(S.lacos||[]).length) return; const lim={"padrão":3,"difícil":2,"implacável":1}[S.dificuldade]||3, caiu=new Set();
   subiram.forEach(A=>{ lacosDe(A).forEach(l=>{ if((LACO_T[l.tipo]||0)<lim) return; const B=outroLado(l,A), kb=_sa(B); if(tocados.has(kb)||caiu.has(kb)) return; const e=entidade(B); if(!e) return;
     const motivo=`${l.tipo}${l.desde?` desde ${String(l.desde).slice(0,4)}`:""}`;
-    if(e.dom==="igreja"){ if(e.obj.relacao<=1) return; e.obj.relacao--; avisoMundo(notices,`Ecumenismo: ${e.nome} vê com maus olhos a aproximação com ${A} (${motivo}); a relação cai para ${LV[e.obj.relacao]}.`,[e.nome,A],"reação"); }
+    if(e.dom==="igreja"){ if(e.obj.relacao<=1) return; e.obj.relacao--; const orl=ehOriental(e.obj); avisoMundo(notices,`${orl?"Unidade":"Ecumenismo"}: ${e.nome} vê com maus olhos a aproximação com ${A} (${motivo}); a ${orl?"sintonia com Roma":"relação"} cai para ${LV[e.obj.relacao]}.`,[e.nome,A],"reação"); }
     else if(e.dom==="estado"){ if(e.obj.nivel<=1) return; e.obj.nivel--; avisoMundo(notices,`Diplomacia: ${e.nome} reage à aproximação com ${A} (${motivo}); a relação cai para ${LV[e.obj.nivel]}.`,[e.nome,A],"reação"); }
     else { if(e.obj.atitude<=1) return; e.obj.atitude--; avisoMundo(notices,`Facções: ${e.nome} reage à aproximação com ${A} (${motivo}); a atitude em relação ao Papa cai para ${ATIT[e.obj.atitude]}.`,[e.nome,A],"reação"); S.movimentos.push({data:S.data_iso||"",faccoes:[e.nome],tipo:"reação",texto:`${e.nome} reage à aproximação do Papa com ${A}.`,conhecido:true}); }
     caiu.add(kb); }); }); }
@@ -1428,7 +1434,7 @@ function marcosDoTempo(dA,dB,notices){
   const entre=d=>{ const x=isoN(String(d)); return x>A&&x<=B; }, anoEntre=y=>y>yA&&y<=yB, nomeAtual=n=>{ const e=entidade(n); return e?e.nome:n; };
   IGREJAS_CAT.forEach(c=>{ const g=S.igrejas.find(x=>x.cid===c.n)||acharIgreja(c.n);
     if(anoEntre(c.d)&&!g&&!(S.igrejasRemovidas||[]).some(n=>igCat(n)===c)){ const x=igNoAno(c,yB); historiaAdd("ig+"+c.n,String(c.d),"igreja",`Por volta de ${c.d}, surge ${x.nome} (${famLabel(c.f)}; líder: ${x.lider})${c.por?`: ${c.por}`:""}. Se a linha do jogo não o impediu, registre-a em "igrejas" com tipo e lider.`,c.papal); }
-    if(c.a!=null&&anoEntre(c.a)&&g) historiaAdd("ig-"+c.n,String(c.a),"igreja",`Por volta de ${c.a}, ${g.nome} deixa de existir${c.fim?`: ${c.fim}`:""}. Se a linha do jogo seguir, envie igrejas [{nome:"${g.nome}", remover:true}] ou fundir_em.`);
+    if(c.a!=null&&anoEntre(c.a)&&g) { const d=c.para&&S.igrejas.find(x=>x.cid===c.para); historiaAdd("ig-"+c.n,String(c.a),"igreja",`Por volta de ${c.a}, ${g.nome} deixa de existir${c.fim?`: ${c.fim}`:""}. Se a linha do jogo seguir, envie igrejas [{nome:"${g.nome}", ${d?`fundir_em:"${d.nome}"`:"remover:true"}}].`); }
     (c.h||[]).forEach(([ano,nmAnt,ldAnt],i)=>{ if(!anoEntre(ano)||!g||_sa(g.nome)!==_sa(nmAnt)) return; const prox=c.h[i+1]||[null,c.n,c.l], novo=prox[1], ldNovo=prox[2]||c.l;
       if(c.auto){ renomearIgreja(g,novo,notices); if(!g.lider||_sa(g.lider)===_sa(ldAnt||"")) g.lider=ldNovo; }
       else historiaAdd(`ign${ano}${c.n}`,String(ano),"igreja",`Em ${ano}, ${nmAnt} passa a ${novo} (líder: ${ldNovo}). Se a linha do jogo seguir, envie igrejas [{nome:"${nmAnt}", novo_nome:"${novo}", lider:"${ldNovo}"}].`,c.papal); }); });
@@ -1441,7 +1447,7 @@ function marcosDoTempo(dA,dB,notices){
   S.personagens.forEach(p=>{ const m=+p.morte_real; if(m&&anoEntre(m)&&p.ativo!==false) historiaAdd("morte:"+p.nome,String(m),"elenco",`${p.nome} morreu em ${m} na história real: decida pela saúde, pela idade e pelo acaso se morre agora (ativo:false e saida).`); });
 }
 /* o que vai no pedido desta jogada: as mais antigas primeiro; cada uma aparece em duas jogadas e depois sai */
-function historiaParaPrompt(tempo){ const pend=(S.historia||[]).slice().sort((a,b)=>a.data.localeCompare(b.data)); if(!pend.length) return {texto:"",ids:[]};
+function historiaParaPrompt(tempo){ const pend=(S.historia||[]).slice().sort((a,b)=>a.data<b.data?-1:a.data>b.data?1:0); if(!pend.length) return {texto:"",ids:[]};
   const lim=tempo?10:6, xs=pend.slice(0,lim);
   return {ids:xs.map(h=>h.id),texto:`HISTÓRIA REAL A CONSIDERAR (guardada pelo app: o que aconteceu na história real entre a data anterior e a de hoje. Aplique ao mundo o que a linha do jogo não impediu, pela lógica, pelo acaso e pelas decisões já tomadas, sem citar esta lista; o que estiver marcado "decisão papal" só acontece se o Papa, que é o jogador, decidir, e no máximo vira pressão ou oportunidade):\n${xs.map(h=>`- ${h.papal?"(decisão papal) ":""}${h.texto}`).join("\n")}${pend.length>xs.length?`\n(+${pend.length-xs.length} outros marcos guardados para as próximas respostas)`:""}\n\n`}; }
 function marcarHistoriaVista(ids){ if(!ids||!ids.length) return; const ok=new Set(ids); (S.historia||[]).forEach(h=>{ if(ok.has(h.id)) h.visto=(h.visto||0)+1; });
@@ -1524,7 +1530,7 @@ function seedFor(mode){ return rulesFor(mode==="zero"?"zero":"jogo",{}); }
 const ADDENDUM = `ADENDO DO APP (complementa o documento; em conflito, o documento prevalece, salvo quanto ao FORMATO DE SAÍDA, que é obrigatório)
 A1. Informação imperfeita aplicada ao painel e aos personagens (7.6, 10.8). O "painel" é o percebido: o que os relatórios fazem chegar ao Papa, com vieses (otimismo de quem quer agradar, alarmismo de quem quer verbas, atraso). O "painel_real" é a verdade, que você mantém fixa; diferença máxima de um nível. Cada personagem tem disposição percebida e disposição real, traços (10.4), plano, memórias com peso e uma conclusão sobre o Papa (10.8); o que for oculto guia o comportamento, mas nunca é narrado como sabido pelo Papa. Relações de bastidores (aliança, patronagem, dependência, rivalidade, rancor) entre personagens, facções e o Papa existem sem o Papa saber; revele-as só por meios plausíveis e então marque-as como conhecidas.
 A2. A Santa Sé no mundo (10.3). A Santa Sé não tem força; tem autoridade moral, núncios, Igrejas locais, mediação e acesso humanitário. Mediação exige aceitação das duas partes e fracassa com frequência. Uma palavra pública do Papa pode proteger ou expor cristãos de um lugar; os bispos locais dizem o que preferem. Organismos internacionais contam (ONU, UE, Conselho da Europa, OSCE, União Africana, OEA). O ciclo de notícias é curto, a atenção decai e as redes amplificam os extremos. Em cada conflito, registre as partes, a intensidade, os cristãos afetados e o papel possível da Santa Sé (mediação, corredores humanitários, troca de prisioneiros, silêncio prudente). Resultados futuros (eleições, guerras, mercados) são incertos: projete tendências, não certezas. Tendências estruturais pesam em tudo e entram como fios de longa duração: secularização no Ocidente, crescimento católico na África e na Ásia, migração, polarização, inteligência artificial, bioética, clima, perseguição religiosa. Cada ato do Papa ecoa diferente por sub-região e por governo: registre isso na recepção pelos fiéis e nas relações com os Estados.
-A3. Outras Igrejas e religiões. Cada uma tem estrutura, política interna e interesses próprios. Ortodoxia bizantina: Igrejas autocéfalas governadas por sínodos; o Patriarca Ecumênico é primeiro entre iguais, sem jurisdição sobre as outras; Moscou rompeu com Constantinopla em 2018 pela autocefalia ucraniana (janeiro de 2019) e criou em 2021 um exarcado na África; o primado romano é o centro do diálogo (Ravena 2007, Chieti 2016, Alexandria 2023); data comum da Páscoa é tema recorrente. Ortodoxia oriental (coptas, siríacos, armênios, etíopes, eritreus, malankara): diálogo oficial desde 2003. Católicos orientais: sui iuris, sensíveis à latinização; o "uniatismo" fere os ortodoxos (Balamand, 1993); há disputas internas (ex.: litúrgica na Siro-Malabar). Anglicanos: províncias autônomas; Canterbury contestado por grande parte do Sul Global; ARCIC. Protestantes históricos: federações sem autoridade vinculante; Declaração Conjunta sobre a Justificação (1999) com adesões de metodistas, reformados e anglicanos. Evangélicos e pentecostais: crescem na América Latina e na África, sem interlocutor único, em concorrência direta. Conselho Mundial de Igrejas: a Igreja Católica não é membro, mas integra Fé e Constituição. Judaísmo: sem autoridade central; Nostra Aetate (1965); pontos sensíveis: Israel e Gaza, Shoah, arquivos de Pio XII, missão. Islã: sem autoridade central; Al-Azhar, Najaf e Qom; Documento sobre a Fraternidade Humana (2019); pontos sensíveis: perseguição, reciprocidade, blasfêmia. Velho-católicos (Utrecht, Scranton) e independentes (como a ICAB) têm sucessão apostólica sem comunhão com Roma; a FSSPX reconhece o Papa sem comunhão plena, os sedevacantistas negam os Papas recentes e os palmarianos têm o seu próprio "papa". Líderes vivos dessas confissões entram como persona análoga (seção 5). Um gesto ecumênico do Papa é lido também pela Cúria, pelos tradicionalistas e pelos católicos orientais.
+A3. Outras Igrejas e religiões. Cada uma tem estrutura, política interna e interesses próprios. Ortodoxia bizantina: Igrejas autocéfalas governadas por sínodos; o Patriarca Ecumênico é primeiro entre iguais, sem jurisdição sobre as outras; Moscou rompeu com Constantinopla em 2018 pela autocefalia ucraniana (janeiro de 2019) e criou em 2021 um exarcado na África; o primado romano é o centro do diálogo (Ravena 2007, Chieti 2016, Alexandria 2023); data comum da Páscoa é tema recorrente. Ortodoxia oriental (coptas, siríacos, armênios, etíopes, eritreus, malankara): diálogo oficial desde 2003. Católicos orientais: as Igrejas sui iuris são a Igreja Católica (ficam no Painel; a sintonia delas com Roma pesa na unidade), sensíveis à latinização e à autonomia dos seus sínodos; o "uniatismo" fere os ortodoxos (Balamand, 1993); há disputas internas (ex.: litúrgica na Siro-Malabar). Anglicanos: províncias autônomas; Canterbury contestado por grande parte do Sul Global; ARCIC. Protestantes históricos: federações sem autoridade vinculante; Declaração Conjunta sobre a Justificação (1999) com adesões de metodistas, reformados e anglicanos. Evangélicos e pentecostais: crescem na América Latina e na África, sem interlocutor único, em concorrência direta. Conselho Mundial de Igrejas: a Igreja Católica não é membro, mas integra Fé e Constituição. Judaísmo: sem autoridade central; Nostra Aetate (1965); pontos sensíveis: Israel e Gaza, Shoah, arquivos de Pio XII, missão. Islã: sem autoridade central; Al-Azhar, Najaf e Qom; Documento sobre a Fraternidade Humana (2019); pontos sensíveis: perseguição, reciprocidade, blasfêmia. Velho-católicos (Utrecht, Scranton) e independentes (como a ICAB) têm sucessão apostólica sem comunhão com Roma; a FSSPX reconhece o Papa sem comunhão plena, os sedevacantistas negam os Papas recentes e os palmarianos têm o seu próprio "papa". Líderes vivos dessas confissões entram como persona análoga (seção 5). Um gesto ecumênico do Papa é lido também pela Cúria, pelos tradicionalistas e pelos católicos orientais.
 A4. Calendário secular recorrente (10.3.4), meses habituais: Assembleia Geral da ONU (setembro), G7 (junho, varia), G20 (novembro, varia), conferência do clima COP (novembro ou dezembro), Fórum de Davos (janeiro), datas italianas (25 de abril, 2 de junho). Confirme o ano em jogo.
 A6. ACASO. O app sorteia em cada jogada três números de 1 a 100 ("ACASO PRÉ-SORTEADO"), de forma verdadeiramente aleatória. Use-os, em ordem, só para o que dependa genuinamente de sorte (saúde, clima, acidente, um vazamento ser descoberto, a margem numa votação apertada, um milagre sob exame resistir à perícia, a chegada de uma notícia a tempo): defina antes o limiar pela lógica do mundo; ocorre se o valor for menor ou igual ao limiar. Registre cada uso em "acaso". Nunca use o acaso para o que depende da vontade de pessoas: isso segue as causas (7.4). Não mencione os números na narração.
 A7. RELÓGIOS. Use relógios de 4, 6 ou 8 segmentos para trâmites longos, reformas em implementação, conspirações, ameaças e agendas de facções. Avance-os a cada salto de tempo pela lógica do mundo, mesmo sem ação do Papa; cheio, o evento acontece. Marque "conhecido": false nos que o Papa ignora.
@@ -1566,7 +1572,7 @@ faccoes [{nome, forca 1-5, atitude 1-5 (em relação ao Papa), pauta, lideres, p
 movimentos [{faccoes:[nomes exatos], tipo: aliança|acordo|disputa|ruptura|pressão|manobra, texto (até 30 palavras), conhecido}] quando facções agem entre si: de 1 a 3 a cada avanço de tempo e depois de decisões do Papa que as afetem; conhecido:false para o que o Papa ainda não sabe
 relacoes [{a, b, tipo: aliança|patronagem|dependência|rivalidade|rancor, intensidade 1-3, conhecida, nota, remover}] só novas ou alteradas; o Papa é "Papa"
 mundo {fios:[{nome, esfera, estado, atores, proximo_passo, prazo, paises[], intensidade 1-5, remover}] só os novos ou alterados, pelo nome, remover:true para os resolvidos; calendario {add:[{quando, evento}], remove:[evento]} (o que já passou sai sozinho)}
-igrejas [{nome, tipo, lider (cargo), relacao 1-5, dialogo, situacao, nota, novo_nome, fundir_em, remover}] só novas ou alteradas, com os nomes exatos do quadro
+igrejas [{nome, tipo, lider (cargo), relacao 1-5, dialogo, situacao, nota, novo_nome, fundir_em, remover}] só novas ou alteradas, com os nomes exatos do quadro; cada Igreja aparece uma vez (as autônomas e os membros falam pelo grupo que as abrange); nas católicas orientais, relacao é a sintonia com Roma e pesa na unidade, não no ecumenismo
 lacos [{a, b, tipo: comunhão|diálogo|aliança|tensão|rivalidade|ruptura|guerra|perseguição, nota, remover}] entre Igrejas, Estados e facções (nomes exatos), só novos, alterados ou desfeitos; um laço por par
 relogios [{nome, atual, total 4|6|8, conhecido, remover}] só alterados
 atos [{titulo, instrumento, estado: minuta|em trâmite|promulgado|suspenso|anunciado, grau: disciplinar|definitivo|divino|pastoral, data}] só novos ou alterados
@@ -1581,13 +1587,19 @@ opcoes [3 a 4 ações] SEMPRE que a resposta terminar num ponto de decisão (9.1
 fim {motivo} só se o pontificado terminou
 Use exatamente os nomes já registrados. Escala 1-5: crítico, frágil, estável, sólido, forte. O painel percebido reflete os vieses de quem informa; segunda opinião, dossiê independente ou observação direta o aproximam do real.`;
 
+const OUT_RULES_JOGO=OUT_RULES.replace(`(no presente, de preferência: ${Object.keys(STATES).join(", ")}; em datas`,"(use os nomes do quadro de ESTADOS; país novo pelo nome usual; em datas");
+const outRulesJogo=()=>S&&Object.keys(S.estados||{}).length>=5?OUT_RULES_JOGO:OUT_RULES;
 let author=false; try{ author=localStorage.getItem(KEY0+"-autor")==="1"; }catch(e){}
 let sample=null, S=null, ctl=null, tab="cena", layer="recepcao", selKey=null, mapReady=false, timer=null, showAll=false;
 const $=id=>document.getElementById(id);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const lv=v=>clamp(Math.round(+v||3),1,5);
 function el(tag,attrs={},text){ const e=document.createElement(tag); for(const k in attrs){ if(k==="class") e.className=attrs[k]; else e.setAttribute(k,attrs[k]); } if(text!=null) e.textContent=text; return e; }
-const cssVar=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const CSSV=new Map();
+const cssVar=n=>{ let v=CSSV.get(n); if(v===undefined){ v=getComputedStyle(document.documentElement).getPropertyValue(n).trim(); CSSV.set(n,v); } return v; };
+try{ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{ CSSV.clear(); if(S&&typeof render==="function") render(); }); }catch(e){}
+/* comparação de nomes em português com um só colador (localeCompare cria um a cada chamada) */
+const CMP_PT=(()=>{ try{ return new Intl.Collator("pt-BR").compare; }catch(e){ return (a,b)=>String(a).localeCompare(String(b)); } })();
 const lvColor=v=>cssVar("--l"+lv(v));
 /* data local (AAAA-MM-DD), não UTC: no Brasil, depois das 21h, toISOString() já dá o dia seguinte */
 function hojeISO(delta=0){ const d=new Date(); d.setDate(d.getDate()+delta); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
@@ -1723,6 +1735,7 @@ function migrate(s){
   /* partidas anteriores ao quadro completo: entram as Igrejas que faltam na data do jogo e os laços da época */
   if(!s.igQuadro){ completarIgrejas(s); s.igQuadro=1; }
   if(!Array.isArray(s.lacos)) s.lacos=lacosIniciais(s.data_iso);
+  if((s.igVer||0)<2){ revisarQuadroIgrejas(s); s.igVer=2; }
   ["historia","historiaFeita","mundoLog"].forEach(k=>{ if(!Array.isArray(s[k])) s[k]=[]; });
   if(s.anexos==null) s.anexos="";
   (s.personagens||[]).forEach(p=>{ if(p.influencia==null) p.influencia=3; if(!p.disposicao_real) p.disposicao_real=p.disposicao; });
@@ -1741,8 +1754,22 @@ function completarIgrejas(s){ const y=anoDe(s.data_iso)??anoDe(s.eleicao)??2026;
   if(comb){ s.igrejas=s.igrejas.filter(g=>g!==comb); ["Patriarcado Ortodoxo Grego de Antioquia","Patriarcado Ortodoxo Grego de Alexandria","Patriarcado Ortodoxo Grego de Jerusalém"].forEach(n=>{ const c=IGREJAS_CAT.find(x=>x.n===n); if(!c||!igExisteEm(c,y)) return; const x=igNoAno(c,y); s.igrejas.push({nome:x.nome,tipo:x.tipo,lider:x.lider,cid:c.n,relacao:comb.relacao||3,dialogo:comb.dialogo||"",situacao:comb.situacao||"",nota:comb.nota||""}); }); }
   const VELHO={"Igreja Greco-Melquita":"Patriarca","Igreja Siro-Malabar":"Arcebispo Maior","Igreja Ortodoxa da Ucrânia":"Metropolita de Kiev","Igreja Siríaca Ortodoxa":"Patriarca de Antioquia"};
   s.igrejas.forEach(g=>{ const c=igIdx().get(_sa(g.nome)); if(c){ g.cid=c.n; if(VELHO[c.n]&&g.lider===VELHO[c.n]) g.lider=igNoAno(c,y).lider; } });
-  const rem=(s.igrejasRemovidas||[]).map(_sa);
+  igrejasQueFaltam(s,y); }
+function igrejasQueFaltam(s,y){ const rem=(s.igrejasRemovidas||[]).map(_sa);
   IGREJAS_CAT.forEach(c=>{ if(!igExisteEm(c,y)||s.igrejas.some(g=>g.cid===c.n)) return; const x=igNoAno(c,y); if(rem.includes(_sa(x.nome))||rem.includes(_sa(c.n))) return; s.igrejas.push({nome:x.nome,tipo:x.tipo,lider:x.lider,cid:c.n,relacao:3,dialogo:"",situacao:"",nota:""}); }); }
+/* revisão 2 do quadro: as autônomas e os membros de um grupo listado se unem a ele (com a relação, o diálogo, os laços e as audiências); a entrada conjunta de evangélicos e pentecostais se divide */
+function revisarQuadroIgrejas(s){ const y=anoDe(s.data_iso)??anoDe(s.eleicao)??2026; if(!Array.isArray(s.igrejas)) return; if(!Array.isArray(s.lacos)) s.lacos=[];
+  const trocar=(de,para)=>{ const k=_sa(de); s.lacos=s.lacos.map(l=>({...l,a:_sa(l.a)===k?para:l.a,b:_sa(l.b)===k?para:l.b})).filter(l=>_sa(l.a)!==_sa(l.b)); const v=new Set(); s.lacos=s.lacos.filter(l=>{ const c=[_sa(l.a),_sa(l.b)].sort().join("|"); if(v.has(c)) return false; v.add(c); return true; });
+    if(s.dialogos&&s.dialogos["i:"+de]){ if(!s.dialogos["i:"+para]) s.dialogos["i:"+para]=s.dialogos["i:"+de]; delete s.dialogos["i:"+de]; } };
+  const FIM2=new Set(["Igreja Ortodoxa Russa no Exterior (ROCOR)","Valdenses (Pobres de Lyon)"]);
+  const ev=s.igrejas.find(g=>_sa(g.nome)===_sa("Aliança Evangélica Mundial e pentecostais")), pe=igPorNome("Fraternidade Pentecostal Mundial");
+  if(ev&&pe&&igExisteEm(pe,y)&&!s.igrejas.some(g=>g.cid===pe.n)){ const x=igNoAno(pe,y); s.igrejas.push({nome:x.nome,tipo:x.tipo,lider:x.lider,cid:pe.n,relacao:ev.relacao||3,dialogo:"",situacao:ev.situacao||"",nota:""}); }
+  s.igrejas.slice().forEach(g=>{ let c=igIdx().get(_sa(g.nome))||(g.cid&&igIdx().get(_sa(g.cid))); if(!c) return;
+    let redir=false; if(FIM2.has(c.n)&&c.a!=null&&y>=c.a&&c.para){ c=igPorNome(c.para)||c; redir=true; }
+    const alias=redir||Object.keys(IG_ALIAS).some(a=>_sa(a)===_sa(g.nome)), dono=s.igrejas.find(x=>x!==g&&x.cid===c.n);
+    if(dono){ if(g.relacao!==3&&dono.relacao===3) dono.relacao=g.relacao; ["dialogo","situacao","nota"].forEach(k=>{ if(!dono[k]&&g[k]) dono[k]=g[k]; }); s.igrejas.splice(s.igrejas.indexOf(g),1); trocar(g.nome,dono.nome); return; }
+    g.cid=c.n; if(alias){ const x=igNoAno(c,y), ant=g.nome; g.nome=x.nome; g.tipo=x.tipo; g.lider=x.lider; trocar(ant,g.nome); } });
+  igrejasQueFaltam(s,y); }
 
 function errCopy(e){
   const c=e&&e.code;
@@ -1863,7 +1890,7 @@ function newState(z){
     uso:{chamadas:0,entrada:0,cacheLido:0,cacheEscrito:0,saida:0,bytesTotal:0,bytesUltimo:0,nivelUltimo:0}, consolidacao:"", consolidadoAte:0, tom:"",
     ancoras:{}, dinastia:[], guia:-1, consequencias:[], dialogos:{}, audiencias:null, caixa:[], cronica:[], feitosOk:[],
     metas:String((z&&z.metas)||"").split(/;\s*/).filter(Boolean).slice(0,3).map(t=>({texto:t,progresso:0,estado:"em curso",nota:""})),
-    atributos:(()=>{ const a={piedade:3,doutrina:3,pastoral:3,politica:3,gestao:3}; if(z&&z.atributosFixos) Object.assign(a,z.atributosFixos); return a; })(), vida:7, dificuldade:(z&&z.dificuldade)||"padrão", igrejas:igrejasDaEra(z&&z.data).map(([nome,tipo,lider,cid])=>({nome,tipo,lider,cid,relacao:3,dialogo:"",situacao:"",nota:""})), needsWorld:true, anexos:"", memorial:[], faccoesExtintas:[], igrejasRemovidas:[], igQuadro:1,
+    atributos:(()=>{ const a={piedade:3,doutrina:3,pastoral:3,politica:3,gestao:3}; if(z&&z.atributosFixos) Object.assign(a,z.atributosFixos); return a; })(), vida:7, dificuldade:(z&&z.dificuldade)||"padrão", igrejas:igrejasDaEra(z&&z.data).map(([nome,tipo,lider,cid])=>({nome,tipo,lider,cid,relacao:3,dialogo:"",situacao:"",nota:""})), needsWorld:true, anexos:"", memorial:[], faccoesExtintas:[], igrejasRemovidas:[], igQuadro:1, igVer:2,
     lacos:lacosIniciais(z&&z.data), historia:[], historiaFeita:[], mundoLog:[]
   };
   IND.forEach(([k])=>{ s.painel[k]=3; s.painel_real[k]=3; }); REG.forEach(([k])=>s.recepcao[k]=3);
@@ -2018,8 +2045,10 @@ function applyState(j,pool,opt={}){
     if(o.conhecido&&!inicial) notices.push(`Facções, ${o.tipo}: ${o.texto||fs.join(" e ")}`); });
   if(S.movimentos.length>40) S.movimentos=S.movimentos.slice(-40);
   if(Array.isArray(j.relacoes)) j.relacoes.forEach(r=>{
-    if(!r||!r.a||!r.b||!RELT[r.tipo]) return;
-    r={...r,a:nomeCanonico(r.a),b:nomeCanonico(r.b)}; if(r.a===r.b) return;
+    if(!r||!r.a||!r.b) return; r={...r,a:nomeCanonico(r.a),b:nomeCanonico(r.b)}; if(r.a===r.b) return;
+    /* desfazer sem tipo: todas as relações do par */
+    if(r.remover===true&&!RELT[r.tipo]){ const par=y=>(y.a===r.a&&y.b===r.b)||(y.a===r.b&&y.b===r.a); S.relacoes.filter(par).forEach(y=>{ if(y.conhecida) notices.push(`Relações: desfez-se ${y.tipo} entre ${y.a} e ${y.b}.`); }); S.relacoes=S.relacoes.filter(y=>!par(y)); return; }
+    if(!RELT[r.tipo]) return;
     const i=S.relacoes.findIndex(y=>y.tipo===r.tipo&&((y.a===r.a&&y.b===r.b)||(y.a===r.b&&y.b===r.a)));
     if(r.remover===true){ if(i>=0){ if(S.relacoes[i].conhecida) notices.push(`Relações: desfez-se ${r.tipo} entre ${r.a} e ${r.b}.`); S.relacoes.splice(i,1); } return; }
     const o={a:String(r.a),b:String(r.b),tipo:r.tipo,intensidade:clamp(Math.round(+r.intensidade||1),1,3),conhecida:r.conhecida===true||(i>=0&&S.relacoes[i].conhecida),nota:String(r.nota||(i>=0?S.relacoes[i].nota:""))};
@@ -2084,11 +2113,11 @@ function applyState(j,pool,opt={}){
   if(j.notas_ocultas){ const antes=S.notas.length; S.notas=aplicarLista(S.notas,j.notas_ocultas,null,x=>tx(x)||null,40); if(author&&antes>=40&&j.notas_ocultas.add&&j.notas_ocultas.add.length) notices.push("Notas ocultas no limite de 40: as mais antigas saíram. Peça ao narrador que retire as já resolvidas."); }
   if(j.fim && typeof j.fim==="object" && j.fim.motivo && !S.fim){ S.fim={motivo:String(j.fim.motivo),data:S.data_iso}; notices.push(`Fim do pontificado: ${S.fim.motivo}. Segue o epílogo: sé vacante e conclave.`); }
   /* Igrejas: pelo nome de qualquer época; renomear, unir-se a outra ou sair do quadro; as novas ganham o vínculo com o quadro */
-  if(Array.isArray(j.igrejas)) j.igrejas.forEach(g=>{ if(!g||!g.nome) return; let x=acharIgreja(String(g.nome));
-    if(g.remover===true||g.extinta===true||tx(g.fundir_em)){ if(x) encerrarIgreja(x,tx(g.motivo)||tx(g.nota),tx(g.fundir_em),inicial?null:notices); return; }
-    const nn=tx(g.novo_nome); if(x&&nn&&_sa(nn)!==_sa(x.nome)&&!acharIgreja(nn)) renomearIgreja(x,nn.slice(0,120),inicial?null:notices);
-    const o={nome:x?x.nome:String(g.nome).slice(0,120),tipo:String(g.tipo||x?.tipo||"outra religião"),lider:String(g.lider||x?.lider||""),relacao:(!inicial&&x&&g.relacao!=null)?Math.min(lv(g.relacao),x.relacao+1):lv(g.relacao??x?.relacao),dialogo:String(g.dialogo||x?.dialogo||""),situacao:String(g.situacao||x?.situacao||""),nota:String(g.nota||x?.nota||"")};
-    if(x){ if(S.hist.length&&x.relacao!==o.relacao) notices.push(`Ecumenismo: relação com ${o.nome} de ${LV[x.relacao]} para ${LV[o.relacao]}.`); if(o.relacao>x.relacao) subiram.push(x.nome); tocados.add(_sa(x.nome)); Object.assign(x,o); }
+  if(Array.isArray(j.igrejas)) j.igrejas.forEach(g=>{ if(!g||!g.nome) return; let x=acharIgreja(String(g.nome)); const viaGrupo=!!x&&!nomeProprioIg(x,g.nome);
+    if(g.remover===true||g.extinta===true||tx(g.fundir_em)){ if(x&&!viaGrupo) encerrarIgreja(x,tx(g.motivo)||tx(g.nota),tx(g.fundir_em),inicial?null:notices); return; }
+    const nn=tx(g.novo_nome); if(x&&!viaGrupo&&nn&&_sa(nn)!==_sa(x.nome)&&!acharIgreja(nn)) renomearIgreja(x,nn.slice(0,120),inicial?null:notices);
+    const o={nome:x?x.nome:String(g.nome).slice(0,120),tipo:String((!viaGrupo&&g.tipo)||x?.tipo||"outra religião"),lider:String((!viaGrupo&&g.lider)||x?.lider||""),relacao:(!inicial&&x&&g.relacao!=null)?Math.min(lv(g.relacao),x.relacao+1):lv(g.relacao??x?.relacao),dialogo:String(g.dialogo||x?.dialogo||""),situacao:String(g.situacao||x?.situacao||""),nota:String(g.nota||x?.nota||"")};
+    if(x){ if(S.hist.length&&x.relacao!==o.relacao) notices.push(ehOriental(x)?`Unidade: sintonia de ${o.nome} com Roma de ${LV[x.relacao]} para ${LV[o.relacao]}.`:`Ecumenismo: relação com ${o.nome} de ${LV[x.relacao]} para ${LV[o.relacao]}.`); if(o.relacao>x.relacao) subiram.push(x.nome); tocados.add(_sa(x.nome)); Object.assign(x,o); }
     else if(S.igrejas.length<140){ const c=igCat(String(g.nome)); if(c&&!S.igrejas.some(y=>y.cid===c.n)){ o.cid=c.n; if(!g.tipo) o.tipo=igNoAno(c,anoJogo()??2026).tipo; if(!g.lider) o.lider=igNoAno(c,anoJogo()??2026).lider; }
       S.igrejas.push(o); tocados.add(_sa(o.nome)); if(S.igrejasRemovidas) S.igrejasRemovidas=S.igrejasRemovidas.filter(n=>_sa(n)!==_sa(o.nome)); if(!inicial&&S.hist.length) avisoMundo(notices,`Igrejas: entra no quadro ${o.nome}${o.lider?` (${o.lider})`:""}.`,[o.nome],"entrada"); } });
   /* laços entre Igrejas, Estados e facções e a reação em cadeia do lado hostil */
@@ -2153,8 +2182,9 @@ function stateCompact(ctx,L){
   if(respondidas.length) out.push(`RESPOSTAS ESCRITAS DO PAPA: ${respondidas.map(m=>`a ${m.de}: ${m.resposta.slice(0,160)}`).join("; ")}`);
   if(S.compromissos.length){ const prazo={"padrão":21,"difícil":14,"implacável":10}[S.dificuldade]||21, hoje=Date.parse((S.data_iso||"")+"T00:00:00Z"), idade=c=>{ const t=Date.parse((c.data||"")+"T00:00:00Z"); return Number.isFinite(t)&&Number.isFinite(hoje)?Math.round((hoje-t)/864e5):0; };
     const venc=S.compromissos.filter(c=>c.tipo!=="ofensa"&&idade(c)>=prazo), recentes=S.compromissos.slice(-12);
-    const mostra=S.compromissos.filter(c=>det==="full"||recentes.includes(c)||(c.com&&citado([_n(c.com)],T)));
-    out.push(`COMPROMISSOS: ${mostra.map(c=>`${c.tipo}${c.com?` (${c.com})`:""}: ${c.texto}${c.data?` [desde ${c.data}]`:""}`).join("; ")}${mostra.length<S.compromissos.length?` (+${S.compromissos.length-mostra.length} mais antigos, ainda em aberto)`:""}`); if(venc.length) out.push(`COBRANÇAS (compromissos com ${prazo} dias ou mais, sem cumprimento registrado): ${venc.map(c=>`${c.com||"?"}: ${c.texto} (${idade(c)} dias)`).join("; ")}. Quem recebeu cobra agora, em privado ou em público; se o Papa não responder, a atitude dele e da facção dele cai. Retire o compromisso quando for cumprido.`); }
+    /* cada compromisso aparece uma vez: os vencidos só em COBRANÇAS */
+    const mostra=S.compromissos.filter(c=>!venc.includes(c)&&(det==="full"||recentes.includes(c)||(c.com&&citado([_n(c.com)],T)))), fora=S.compromissos.length-venc.length-mostra.length;
+    if(mostra.length||fora>0) out.push(`COMPROMISSOS: ${mostra.map(c=>`${c.tipo}${c.com?` (${c.com})`:""}: ${c.texto}${c.data?` [desde ${c.data}]`:""}`).join("; ")}${fora>0?` (+${fora} mais antigos, ainda em aberto)`:""}`); if(venc.length) out.push(`COBRANÇAS (compromissos com ${prazo} dias ou mais, sem cumprimento registrado): ${venc.map(c=>`${c.com||"?"}: ${c.texto} (${idade(c)} dias)`).join("; ")}. Quem recebeu cobra agora, em privado ou em público; se o Papa não responder, a atitude dele e da facção dele cai. Retire o compromisso quando for cumprido.`); }
   if(S.atos.length) out.push(`ATOS: ${S.atos.slice(-(det==="min"?6:12)).map(a=>`${a.titulo} [${a.instrumento}; ${a.estado}; ${a.data}]`).join("; ")}`);
   out.push(`FACÇÕES (${S.faccoes.length} de no máximo 16): ${S.faccoes.map(f=>`${f.nome} força ${f.forca} atitude ${f.atitude}${det!=="min"&&f.pauta?` (${f.pauta})`:""}${det!=="min"&&f.plano?`; plano: ${f.plano}`:""}`).join("; ")}`);
   if((S.faccoesExtintas||[]).length) out.push(`FACÇÕES EXTINTAS (não as recrie com outro nome; o que restou delas vive nas outras): ${S.faccoesExtintas.slice(det==="min"?-3:-8).map(e=>det==="min"?e.nome:`${e.nome} (${e.fim||"?"}; ${e.motivo})`).join("; ")}`);
@@ -2186,12 +2216,16 @@ function stateCompact(ctx,L){
   }
   if(S.mundo.calendario.length) out.push(`CALENDÁRIO MUNDIAL: ${[...S.mundo.calendario].sort((a,b)=>String(a.quando).localeCompare(String(b.quando))).slice(0,det==="min"?4:10).map(e=>`${e.quando} ${e.evento}`).join("; ")}`);
   { const Ts=_sa(T), igCit=new Set(S.igrejas.filter(g=>chavesIgreja(g).some(k=>Ts.includes(k)))), mexeu=new Set((S.mundoLog||[]).slice(-10).flatMap(m=>m.alvos.map(_sa)));
-    const igV=det==="full"?S.igrejas:S.igrejas.filter(g=>g.relacao!==3||igCit.has(g)||mexeu.has(_sa(g.nome))).sort((a,b)=>(igCit.has(b)-igCit.has(a))||(Math.abs(b.relacao-3)-Math.abs(a.relacao-3))).slice(0,det==="min"?10:18);
-    const crist=S.igrejas.filter(g=>!/judaísmo|islã|outras religiões/.test(g.tipo)), med=crist.length?(crist.reduce((n,g)=>n+g.relacao,0)/crist.length).toFixed(1).replace(".",","):"3";
-    out.push(`IGREJAS E RELIGIÕES (relação com Roma 1-5; ${S.igrejas.length} no quadro; média das cristãs ${med}, a ser coerente com o painel de ecumenismo${det!=="full"?"; as não listadas: relação estável":""}): ${igV.map(g=>`${g.nome} ${g.relacao}${(det==="full"||igCit.has(g))&&(g.dialogo||g.situacao)?` (${[g.dialogo,g.situacao].filter(Boolean).join("; ")})`:""}`).join("; ")||"todas estáveis"}`);
-    if(det!=="full"&&ctx.igreja&&!L.enxugar){ const fams=[...new Set(S.igrejas.map(g=>g.tipo))]; out.push(`QUADRO COMPLETO DE IGREJAS E RELIGIÕES (use os nomes exatos): ${fams.map(t=>`${famLabel(t)}: ${S.igrejas.filter(g=>g.tipo===t).map(g=>g.nome).join("; ")}`).join(" | ")}`); }
+    const media=xs=>xs.length?(xs.reduce((n,g)=>n+g.relacao,0)/xs.length).toFixed(1).replace(".",","):"3", fala=g=>`${g.nome} ${g.relacao}${(det==="full"||igCit.has(g))&&(g.dialogo||g.situacao)?` (${[g.dialogo,g.situacao].filter(Boolean).join("; ")})`:""}`;
+    const vis=xs=>det==="full"?xs:xs.filter(g=>g.relacao!==3||igCit.has(g)||mexeu.has(_sa(g.nome))).sort((a,b)=>(igCit.has(b)-igCit.has(a))||(Math.abs(b.relacao-3)-Math.abs(a.relacao-3)));
+    const outras=S.igrejas.filter(g=>!ehOriental(g)), orient=S.igrejas.filter(ehOriental);
+    const igV=vis(outras).slice(0,det==="full"?999:det==="min"?10:18), crist=outras.filter(g=>!/judaísmo|islã|outras religiões/.test(g.tipo));
+    out.push(`IGREJAS E RELIGIÕES (relação com Roma 1-5; ${outras.length} no quadro; média das cristãs ${media(crist)}, a ser coerente com o painel de ecumenismo${det!=="full"?"; as não listadas: relação estável":""}): ${igV.map(fala).join("; ")||"todas estáveis"}`);
+    if(orient.length){ const oV=vis(orient).slice(0,det==="full"?99:det==="min"?6:12); out.push(`IGREJAS CATÓLICAS ORIENTAIS (sui iuris, em plena comunhão: são a Igreja Católica; relacao = sintonia com Roma 1-5, coerente com o painel de unidade; ${orient.length}; média ${media(orient)}${det!=="full"?"; as não listadas: sintonia estável":""}): ${oV.map(fala).join("; ")||"todas estáveis"}`); }
+    if(det!=="full"&&ctx.igreja&&!L.enxugar){ const fams=[...new Set(S.igrejas.map(g=>g.tipo))]; out.push(`QUADRO COMPLETO DE IGREJAS E RELIGIÕES (use os nomes exatos): ${fams.map(t=>`${t===ORIENTAL?"Católicas orientais (Igreja Católica)":famLabel(t)}: ${S.igrejas.filter(g=>g.tipo===t).map(g=>g.nome).join("; ")}`).join(" | ")}`); }
     const ls=(S.lacos||[]).filter(l=>entidade(l.a)&&entidade(l.b)), cit=l=>Ts.includes(_sa(l.a))||Ts.includes(_sa(l.b))||[...igCit].some(g=>_sa(g.nome)===_sa(l.a)||_sa(g.nome)===_sa(l.b));
-    const lv2=det==="full"?ls:ls.slice().sort((a,b)=>(cit(b)-cit(a))||((LACO_T[b.tipo]||0)-(LACO_T[a.tipo]||0))).slice(0,det==="min"?8:14);
+    const novo=l=>mexeu.has(_sa(l.a))&&mexeu.has(_sa(l.b));
+    const lv2=det==="full"?ls:ls.slice().sort((a,b)=>(cit(b)-cit(a))||(novo(b)-novo(a))||((LACO_T[b.tipo]||0)-(LACO_T[a.tipo]||0))).slice(0,det==="min"?8:14);
     if(lv2.length) out.push(`LAÇOS (o app aplica a reação do lado hostil quando o Papa se aproxima do outro; registre os novos ou desfeitos em "lacos"): ${lv2.map(l=>`${l.a} × ${l.b}: ${l.tipo}${l.desde?` (${String(l.desde).slice(0,4).replace(/^0+/,"")})`:""}`).join("; ")}${lv2.length<ls.length?` (+${ls.length-lv2.length} laços fora desta cena)`:""}`); }
   if(S.relogios.length) out.push(`RELÓGIOS: ${S.relogios.map(r=>`${r.nome} ${r.atual}/${r.total}${r.conhecido?"":" [OCULTO]"}`).join("; ")}`);
   if(S.registro.length) out.push(`LIVRO DE REGISTRO:\n${S.registro.slice(det==="min"?-8:-15).join("\n")}`);
@@ -2377,7 +2411,7 @@ const _re=k=>k.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
 const PAPEIS=[[/\bdecano\b/,/decano/i],[/\bcamerlengo\b/,/camerlengo/i],[/\bsubstituto\b/,/substituto/i],[/\b(confessor|pregador)\b/,/confessor|pregador/i],[/\bsecretario de estado\b/,/secret[aá]rio de estado/i],[/\b(meu secretario|secretario particular)\b/,/secret[aá]rio particular/i],[/\b(guarda suica|comandante da guarda)\b/,/guarda su[ií][çc]a/i],[/\b(sala de imprensa|porta-voz)\b/,/sala de imprensa/i],[/\bvigario de roma\b/,/vig[aá]rio de roma/i],[/\b(mestre de cerimonias|mestre das celebracoes)\b/,/mestre das celebra/i],[/\b(ajudante de camara|camareiro)\b/,/ajudante de c[aâ]mara/i]];
 function interlocutoresCitados(txt){
   const T=" "+_sa(txt)+" ", ach=[];
-  const pos=k=>{ k=_sa(k); if(k.length<4) return -1; const m=T.match(new RegExp("(^|[^a-z0-9])"+_re(k)+"($|[^a-z0-9])")); return m?m.index:-1; };
+  const pos=k=>{ k=_sa(k); if(k.length<4||!T.includes(k)) return -1; const m=T.match(new RegExp("(^|[^a-z0-9])"+_re(k)+"($|[^a-z0-9])")); return m?m.index:-1; };
   const menor=(a,b)=>a<0?b:b<0?a:Math.min(a,b);
   const pessoas=S.personagens.filter(p=>p.ativo!==false).map(p=>{ const xs=[]; let forte=null;
     keysOf(p).forEach((k,j)=>{ const x=pos(k); if(x<0) return; xs.push(x); if(j===0&&/\s/.test(k)) forte=[x,x+k.length+1]; });
@@ -2392,7 +2426,7 @@ function interlocutoresCitados(txt){
   const igs=S.igrejas.map(g=>{ let best=null; chavesIgreja(g).forEach(k=>{ const x=pos(k); if(x<0) return; const fim=x+k.length+1; if(!best||x<best[0]||(x===best[0]&&fim>best[1])) best=[x,fim]; }); return best?{g,best}:null; }).filter(Boolean);
   igs.forEach(a=>{ if(igs.some(b=>b!==a&&b.best[0]<=a.best[0]&&b.best[1]>=a.best[1]&&(b.best[1]-b.best[0])>(a.best[1]-a.best[0]))) return; ach.push([a.best[0],"i:"+a.g.nome]); });
   Object.keys(S.estados).forEach(n=>{ const nomes=[n,...Object.keys(EST_ALIAS).filter(k=>EST_ALIAS[k]===n)]; let m=null;
-    nomes.forEach(v=>{ const x=T.match(new RegExp("(governo|embaixador|embaixada|presidente|primeiro-ministro|rei|rainha|imperador|soberano|chanceler|enviado|ministro)[a-z -]{0,25}\\b(de|da|do|dos|das)\\s+"+_re(_sa(v))+"($|[^a-z])")); if(x&&(!m||x.index<m.index)) m=x; });
+    nomes.forEach(v=>{ if(!T.includes(_sa(v))) return; const x=T.match(new RegExp("(governo|embaixador|embaixada|presidente|primeiro-ministro|rei|rainha|imperador|soberano|chanceler|enviado|ministro)[a-z -]{0,25}\\b(de|da|do|dos|das)\\s+"+_re(_sa(v))+"($|[^a-z])")); if(x&&(!m||x.index<m.index)) m=x; });
     if(m) ach.push([m.index,"e:"+n]); });
   return [...new Set(ach.sort((a,b)=>a[0]-b[0]).map(x=>x[1]))];
 }
@@ -2587,7 +2621,7 @@ function cvSugestoesIniciais(x,mensagem){
   const L=[]; const pend=(S.pendencias||[])[0];
   if(mensagem) L.push(`Recebi a sua ${String(mensagem.tipo||"carta").toLowerCase()}. O que exatamente espera de mim?`);
   if(x.tipo==="grupo") L.push("Quero ouvir cada um de vocês, com franqueza, antes de decidir.");
-  else if(x.tipo==="igreja") L.push("Como está hoje o diálogo entre as nossas Igrejas?");
+  else if(x.tipo==="igreja") L.push(ehOriental(x.ref)?"Como estão o seu Sínodo e os seus fiéis? Do que precisam de Roma?":"Como está hoje o diálogo entre as nossas Igrejas?");
   else if(x.tipo==="estado") L.push("Qual é a posição do seu governo sobre a situação atual?");
   else L.push("O que mais o preocupa hoje, com franqueza?");
   const comp=(S.compromissos||[]).find(c=>_sa(c.com)===_sa(x.nome)||(x.ref&&_sa(c.com)===_sa(x.ref.nome||"")));
@@ -2597,7 +2631,7 @@ function cvSugestoesIniciais(x,mensagem){
 }
 function fichaCurta(x){ const r=x.ref;
   if(x.tipo==="pessoa") return `${r.nome}, ${r.cargo}${idadeDe(r)!=null?`, ${idadeDe(r)} anos`:""}; facção ${r.faccao||"-"}; disposição REAL ${r.disposicao_real||r.disposicao}; hábito: ${r.habito||"?"}; recusa: ${r.recusa||"?"}; desejo: ${r.desejo||"?"}; frase: "${r.frase||"?"}"; conclusão sobre o Papa: ${r.conclusao||"ainda o avalia"}; plano: ${r.plano||"?"}${r.segredo?`; segredo (só ele sabe): ${r.segredo}`:""}`;
-  if(x.tipo==="igreja") return `${r.lider||"O líder"} de ${r.nome}; relação com Roma ${LV[r.relacao]||"estável"}; ${r.dialogo||""}`;
+  if(x.tipo==="igreja") return `${r.lider||"O líder"} de ${r.nome}${ehOriental(r)?" (Igreja católica oriental, em plena comunhão)":""}; ${ehOriental(r)?"sintonia":"relação"} com Roma ${LV[r.relacao]||"estável"}; ${r.dialogo||""}`;
   if(x.tipo==="estado") return `Representante de ${x.sub}; relação com a Santa Sé ${LV[r.nivel]}; ${r.formal||""}`;
   return x.nome; }
 function abrirReuniao(chaves){
@@ -2637,7 +2671,7 @@ function cvPrompt(msg){
   let ficha="";
   if(x.tipo==="pessoa") ficha=`${r.nome}, ${r.cargo}${idadeDe(r)!=null?`, ${idadeDe(r)} anos`:""}. Facção: ${r.faccao||"-"}. Influência ${r.influencia||3}. Disposição REAL em relação ao Papa: ${r.disposicao_real||r.disposicao} (o Papa percebe: ${r.disposicao}). Hábito: ${r.habito||"?"}. Recusa: ${r.recusa||"?"}. Desejo: ${r.desejo||"?"}. Frase característica: "${r.frase||"?"}". Conclusão sobre o Papa: ${r.conclusao||"ainda o avalia"}. Plano: ${r.plano||"?"}. Memórias: ${r.memorias||"-"}. ${r.segredo?`Segredo (só ela sabe; revela apenas se tiver motivo forte): ${r.segredo}.`:""} ${r.nota||""}
 Relações dela: ${S.relacoes.filter(z=>z.a===r.nome||z.b===r.nome).slice(0,10).map(z=>`${z.a}/${z.b} ${z.tipo}`).join("; ")||"nenhuma registrada"}.`;
-  else if(x.tipo==="igreja") ficha=`${r.lider||"O líder"} de ${r.nome} (${r.tipo}). Relação com Roma: ${LV[r.relacao]||"estável"}. Diálogo: ${r.dialogo||"-"}. Situação interna: ${r.situacao||"-"}. ${r.nota||""}`;
+  else if(x.tipo==="igreja") ficha=ehOriental(r)?`${r.lider||"O líder"} de ${r.nome}, Igreja católica oriental sui iuris de tradição ${tradOr(r)}, em plena comunhão com Roma: fala ao Papa como filho e irmão na mesma Igreja, defendendo a autonomia do seu Sínodo, o seu rito e os seus fiéis (inclusive contra a latinização). Sintonia com Roma: ${LV[r.relacao]||"estável"}. Com Roma: ${r.dialogo||"-"}. Situação interna: ${r.situacao||"-"}. ${r.nota||""}`:`${r.lider||"O líder"} de ${r.nome} (${r.tipo}). Relação com Roma: ${LV[r.relacao]||"estável"}. Diálogo: ${r.dialogo||"-"}. Situação interna: ${r.situacao||"-"}. ${r.nota||""}${(()=>{ const a=abrange(igCat(r),anoJogo()??2026); return a.length?` Fala também por: ${a.join("; ")}.`:""; })()}`;
   else if(x.tipo==="outro") ficha=`${x.nome}. Ninguém no estado do jogo tem esse nome: deduza quem é pelo contexto e pela correspondência.`;
   else ficha=`O governante de ${x.sub} ou seu representante. Relação com a Santa Sé: ${LV[r.nivel]}; situação formal: ${r.formal||"?"}. ${r.nota||""}`;
   const contexto=[`Data: ${S.data} (${S.data_iso}); ${litDay(S.data_iso)}.`,`Papa: ${P.nome_papal} (${P.nome||""}), ${P.nacionalidade||""}; atributos ${ATTR.map(([k,l])=>`${l} ${S.atributos[k]}`).join(", ")}.`,
@@ -2816,7 +2850,7 @@ function buildTurn(msg,pool){
   if(S._comandoTxt){ trig.cmd=true; if(/avancar/.test(S._comandoTxt)) trig.tempo=true; if(/ato do pontificado/.test(S._comandoTxt)) trig.ato=true; }
   /* nível 0 já é econômico; os seguintes só entram se o prompt passar do limite do claude.ai */
   const NIVEIS=[{hist:3,res:15,det:"mid"},{hist:2,res:10,det:"mid"},{hist:2,res:8,det:"min"},{hist:1,res:5,det:"min"},{hist:1,res:3,det:"min",semRumores:true},{hist:1,res:2,det:"min",semRumores:true,enxugar:true}];
-  const fixoCompleto=()=>rulesFor("jogo",{})+"\n\n"+(anexoDaData(S.data_iso)||eraBloco(S.data_iso))+"\n\n"+OUT_RULES;
+  const fixoCompleto=()=>rulesFor("jogo",{})+"\n\n"+(anexoDaData(S.data_iso)||eraBloco(S.data_iso))+"\n\n"+outRulesJogo();
   /* o mundo e os bastidores vêm de um pedido à parte (prepararBastidores); a jogada só os pede se esse pedido já falhou duas vezes */
   const viaJogada=!bastidoresEmCurso&&(S.bgTentativas||0)>=2, pedirMundo=!!S.needsWorld&&viaJogada, pedirBastidores=!!S.needsBackground&&viaJogada;
   /* o que falta nas entradas recentes: opiniões sobre (e de) facções novas, traços e idade de quem acabou de entrar */
@@ -2831,7 +2865,7 @@ function buildTurn(msg,pool){
     const mundoPend=pedirMundo;
     const tg=L.enxugar?{cmd:trig.cmd}:trig;
     const anexo=!anexoDaData(S.data_iso)?eraBloco(S.data_iso):(!L.enxugar&&(trig.tempo||trig.mundo||trig.igreja||mundoPend))?ANEXO:"(Anexo de contexto real de setembro de 2026 omitido nesta jogada: a cena não envolve o mundo externo.)";
-    const fixo=enx?(rulesFor("jogo",{enxuto:true,trig:tg,mundoPendente:mundoPend&&!L.enxugar})+"\n\n"+anexo+"\n\n"+OUT_RULES):fixoCompleto();
+    const fixo=enx?(rulesFor("jogo",{enxuto:true,trig:tg,mundoPendente:mundoPend&&!L.enxugar})+"\n\n"+anexo+"\n\n"+outRulesJogo()):fixoCompleto();
     const trocas=[]; let c=0; for(let j=S.log.length-1;j>=0&&c<L.hist*2;j--){ const m=S.log[j]; if(m.r==="s") continue; trocas.unshift(m); c++; }
     const novos=S.resumos.slice(S.consolidadoAte||0).slice(-L.res);
     const variavel=`${S.anexos?`ANEXOS DO JOGADOR (fatos do jogo, salvo se contradisserem a doutrina ou a história anterior à divergência):\n${S.anexos}\n\n`:""}${calendarBlock()}${S.tom?`TOM COMBINADO COM O JOGADOR: ${S.tom}\n\n`:""}ESTADO DO JOGO
@@ -2953,7 +2987,7 @@ ${stateCompact({texto:""},{det:"full"})}
 Responda SOMENTE com um objeto JSON, sem texto antes ou depois. Frases curtas: no máximo 20 palavras por campo de texto.`;
   const pedMundo=`TAREFA: estabeleça o mundo em segundo plano na data do jogo (${S.data_iso||"?"}), coerente com o estado e com a época. Campos:
 "mundo": {"fios": [8 a 12 fios de fundo distribuídos pelas esferas de 10.3: {nome, esfera, estado, atores, proximo_passo, prazo, paises (nomes de países), intensidade 1-5}], "calendario": {"add": [{quando (AAAA-MM-DD), evento}] dos próximos três meses]}};
-"igrejas": [{nome (exato, do quadro), relacao 1-5, dialogo, situacao}] só para as 15 a 25 mais relevantes agora (as demais ficam estáveis)${hist?", e acrescente com tipo e lider as da época que faltem no quadro":""};
+"igrejas": [{nome (exato, do quadro), relacao 1-5, dialogo, situacao}] só para as 15 a 25 mais relevantes agora (as demais ficam estáveis; nas católicas orientais, relacao é a sintonia com Roma)${hist?", e acrescente com tipo e lider as da época que faltem no quadro":""};
 "lacos": [3 a 8 {a, b, tipo: comunhão|diálogo|aliança|tensão|rivalidade|ruptura|guerra|perseguição, nota}] que faltem entre Estados, Igrejas e facções (os do quadro já existem);
 "estados": [8 a 14 {nome, nivel 1-5, formal: plenas|não residente|sem relações, nota}] (${hist?`os poderes de ${ano}: reinos, impérios, cidades-estado, califados`:`de preferência: ${Object.keys(STATES).join(", ")}`});
 "rumores": [2 a 4 {conteudo, fonte, caminho, exatidao, chegou_ao_papa}];
@@ -3055,7 +3089,8 @@ function openSave(){
 (S.memorial||[]).length?`Memória do elenco (saídas antigas): ${S.memorial.slice(-40).map(m=>`${m.nome}, ${m.cargo}${m.motivo?` (${m.motivo}${m.data?`, ${m.data}`:""})`:""}`).join("; ")}.`:"",
 `Movimentos entre facções: ${(S.movimentos||[]).slice(-10).map(m=>`${m.data} ${m.tipo} (${m.faccoes.join(" / ")}): ${m.texto}${m.conhecido?"":" (oculto)"}`).join(" | ")||"nenhum"}.`,
 `Fios de fundo: ${S.mundo.fios.map(f=>`${f.nome} [${f.esfera}; intensidade ${f.intensidade}]: ${f.estado}; atores: ${f.atores}; próximo passo: ${f.proximo_passo}${f.prazo?` (${f.prazo})`:""}`).join(" | ")||"nenhum"}. Calendário mundial: ${S.mundo.calendario.map(e=>`${e.quando} ${e.evento}`).join("; ")||"vazio"}.`,
-`Outras Igrejas e religiões: ${S.igrejas.filter(g=>g.relacao!==3||g.dialogo||g.situacao).map(g=>`${g.nome} (${g.tipo}; relação ${LV[g.relacao]}${g.dialogo?`; diálogo: ${g.dialogo}`:""}${g.situacao?`; interno: ${g.situacao}`:""})`).join(" | ")||"todas estáveis"}${S.igrejas.some(g=>g.relacao===3&&!g.dialogo&&!g.situacao)?`. As demais do quadro, estáveis: ${S.igrejas.filter(g=>g.relacao===3&&!g.dialogo&&!g.situacao).map(g=>g.nome).join("; ")}`:""}.`,
+S.igrejas.some(ehOriental)?`Igrejas católicas orientais (sui iuris; sintonia com Roma, pesa na unidade): ${S.igrejas.filter(g=>ehOriental(g)&&mexida(g)).map(g=>`${g.nome} (${LV[g.relacao]}${g.dialogo?`; com Roma: ${g.dialogo}`:""}${g.situacao?`; interno: ${g.situacao}`:""})`).join(" | ")||"todas em sintonia estável"}.`:"",
+`Outras Igrejas e religiões: ${S.igrejas.filter(g=>!ehOriental(g)&&mexida(g)).map(g=>`${g.nome} (${g.tipo}; relação ${LV[g.relacao]}${g.dialogo?`; diálogo: ${g.dialogo}`:""}${g.situacao?`; interno: ${g.situacao}`:""})`).join(" | ")||"todas estáveis"}${S.igrejas.some(g=>!ehOriental(g)&&!mexida(g))?`. As demais do quadro, estáveis: ${S.igrejas.filter(g=>!ehOriental(g)&&!mexida(g)).map(g=>g.nome).join("; ")}`:""}.`,
 (S.lacos||[]).length?`Laços entre Igrejas, Estados e facções: ${S.lacos.map(l=>`${l.a} e ${l.b}: ${l.tipo}${l.desde?` desde ${String(l.desde).slice(0,4).replace(/^0+/,"")}`:""}${l.nota?` (${l.nota})`:""}`).join("; ")}.`:"",
 `Relógios: ${S.relogios.map(r=>`${r.nome} ${r.atual}/${r.total}${r.conhecido?"":" (oculto)"}`).join("; ")||"nenhum"}.`,
 `Atributos: ${ATTR.map(([k,l])=>`${l} ${S.atributos[k]}`).join(", ")}. Vida espiritual: ${S.vida}/10. Dificuldade: ${S.dificuldade}. Elenco: ${S.papa.tipo_elenco||"fictício"}.`,
@@ -3301,7 +3336,7 @@ function renderPainel(){
   h.appendChild(el("div",{class:"lvl"},AGG.map(([k,l])=>`${l}: ${LV[aggOf(S.recepcao,k)]}`).join("; ")));
   w.appendChild(h);
   if(author){ const a=el("div",{class:"warn"}); a.appendChild(el("b",{},"Modo autor. ")); a.appendChild(document.createTextNode(IND.filter(([k])=>S.painel_real[k]!==S.painel[k]).map(([k,l])=>`${l}: real ${LV[S.painel_real[k]]}${S.diverg[k]?` (${S.diverg[k]})`:""}`).join("; ")||"O relato coincide com a verdade em todos os indicadores.")); w.appendChild(a); }
-  renderMap(); renderSteps();
+  renderOrientais(); renderMap(); renderSteps();
 }
 function buildMap(){
   if(mapReady||!window.d3||!window.topojson) return;
@@ -3487,10 +3522,14 @@ function renderNet(){
   const assin=known.map(r=>`${r.a}|${r.b}|${r.tipo}`).join(";");
   if(redeCache.assin===assin){ nodes.forEach(n=>{ const q=redeCache.pos[n.id]; if(q){ n.x=q[0]; n.y=q[1]; } }); links.forEach(l=>{ l.source=nodes.find(n=>n.id===l.source); l.target=nodes.find(n=>n.id===l.target); }); }
   else {
+    const ant=redeCache.pos||{}; let conhecidos=0; nodes.forEach(n=>{ const q=ant[n.id]; if(q){ n.x=q[0]; n.y=q[1]; conhecidos++; } });
+    const morno=nodes.length>2&&conhecidos>=nodes.length*0.6;
     const sim=d3.forceSimulation(nodes).force("link",d3.forceLink(links).id(d=>d.id).distance(95))
       .force("charge",d3.forceManyBody().strength(-260)).force("center",d3.forceCenter(W/2,H/2))
       .force("collide",d3.forceCollide(30)).stop();
-    for(let i=0;i<300;i++) sim.tick();
+    if(morno) sim.alpha(0.3); sim.alphaDecay(morno?0.07:0.035);
+    const passos=Math.ceil(Math.log(sim.alphaMin()/sim.alpha())/Math.log(1-sim.alphaDecay()));
+    for(let i=0;i<passos;i++) sim.tick();
     nodes.forEach(n=>{ n.x=clamp(n.x,40,W-40); n.y=clamp(n.y,20,H-20); });
     redeCache={assin,pos:Object.fromEntries(nodes.map(n=>[n.id,[n.x,n.y]]))};
   }
@@ -3695,27 +3734,41 @@ function renderMundo(){
 }
 /* ---------- aba Mundo: Igrejas por família, laços e o que mudou no mundo ---------- */
 let famAbertas=null;
+function itemIgreja(x){ const d=el("div",{class:"item clicavel"}); d.onclick=()=>abrirFicha("i",x.nome);
+  const h=el("div",{class:"ind",style:"padding:0;border:0"}); const nt=el("div",{class:"t icl"}); nt.appendChild(el("span",{class:"simb","aria-hidden":"true"},simbolo(x)));
+  const b=el("button",{type:"button",class:"lnk"},x.nome); b.onclick=e=>{ e.stopPropagation(); abrirFicha("i",x.nome); }; nt.appendChild(b); h.appendChild(nt); h.appendChild(pips(x.relacao)); d.appendChild(h);
+  const cat=igCat(x), host=lacosDe(x.nome).filter(l=>(LACO_T[l.tipo]||0)>=2).length;
+  d.appendChild(el("div",{class:"s"},[x.lider,`${ehOriental(x)?"sintonia":"relação"}: ${LV[x.relacao]}`,cat&&cat.d>0?`desde ${cat.d}`:"",host?`${host} ${host>1?"laços hostis":"laço hostil"}`:""].filter(Boolean).join("; ")));
+  if(x.dialogo) d.appendChild(el("div",{class:"s"},(ehOriental(x)?"Com Roma: ":"Diálogo: ")+x.dialogo)); if(x.situacao) d.appendChild(el("div",{class:"s"},"Situação interna: "+x.situacao)); if(x.nota) d.appendChild(el("div",{class:"s"},x.nota));
+  return d; }
+const ordemIgreja=(a,b)=>((b.relacao!==3)-(a.relacao!==3))||CMP_PT(a.nome,b.nome);
+function grupoIgrejas(rotulo,xs,aberto,chave){ const dt=el("details",{class:"mais fam"}); if(aberto.has(chave)) dt.open=true;
+  dt.addEventListener("toggle",()=>{ if(dt.open) aberto.add(chave); else aberto.delete(chave); });
+  const sm=el("summary",{class:"icl"}); sm.appendChild(document.createTextNode(rotulo)); sm.appendChild(el("span",{class:"badge"},String(xs.length)));
+  const mov=xs.filter(x=>x.relacao!==3); if(mov.length) sm.appendChild(el("span",{class:"badge "+(mov.some(x=>x.relacao<=2)?"b-bad":"b-good")},`${mov.length} fora do estável`));
+  dt.appendChild(sm); xs.slice().sort(ordemIgreja).forEach(x=>dt.appendChild(itemIgreja(x))); return dt; }
+const mexida=x=>x.relacao!==3||!!x.dialogo||!!x.situacao;
 function renderIgrejas(){
   const g=$("igrejas"); if(!g) return; g.innerHTML="";
-  if(!S.igrejas.length){ g.appendChild(el("p",{class:"note"},"Nenhuma Igreja ou religião registrada.")); return; }
-  const fams=[...FAMILIAS.map(f=>f[0]),...new Set(S.igrejas.map(x=>x.tipo).filter(t=>!FAMILIAS.some(f=>f[0]===t)))];
-  if(!famAbertas) famAbertas=new Set(fams.filter(t=>S.igrejas.some(x=>x.tipo===t&&(x.relacao!==3||x.dialogo||x.situacao))));
-  g.appendChild(el("p",{class:"note"},`${S.igrejas.length} Igrejas e religiões no quadro${anoDe(S.data_iso)!=null?` de ${anoDe(S.data_iso)}`:""}, por família. Toque numa para ver a ficha: laços, comunhão, o que mudou e a audiência com o líder.`));
-  fams.forEach(t=>{ const xs=S.igrejas.filter(x=>x.tipo===t); if(!xs.length) return;
-    const dt=el("details",{class:"mais fam"}); if(famAbertas.has(t)) dt.open=true;
-    dt.addEventListener("toggle",()=>{ if(dt.open) famAbertas.add(t); else famAbertas.delete(t); });
-    const sm=el("summary",{class:"icl"}); sm.appendChild(document.createTextNode(famLabel(t))); sm.appendChild(el("span",{class:"badge"},String(xs.length)));
-    const mov=xs.filter(x=>x.relacao!==3); if(mov.length) sm.appendChild(el("span",{class:"badge "+(mov.some(x=>x.relacao<=2)?"b-bad":"b-good")},`${mov.length} fora do estável`));
-    dt.appendChild(sm);
-    xs.slice().sort((a,b)=>((b.relacao!==3)-(a.relacao!==3))||a.nome.localeCompare(b.nome)).forEach(x=>{
-      const d=el("div",{class:"item clicavel"}); d.onclick=()=>abrirFicha("i",x.nome);
-      const h=el("div",{class:"ind",style:"padding:0;border:0"}); const nt=el("div",{class:"t icl"}); nt.appendChild(el("span",{class:"simb","aria-hidden":"true"},simbolo(x)));
-      const b=el("button",{type:"button",class:"lnk"},x.nome); b.onclick=e=>{ e.stopPropagation(); abrirFicha("i",x.nome); }; nt.appendChild(b); h.appendChild(nt); h.appendChild(pips(x.relacao)); d.appendChild(h);
-      const cat=igCat(x), host=lacosDe(x.nome).filter(l=>(LACO_T[l.tipo]||0)>=2).length;
-      d.appendChild(el("div",{class:"s"},[x.lider,`relação ${LV[x.relacao]}`,cat&&cat.d>0?`desde ${cat.d}`:"",host?`${host} ${host>1?"laços hostis":"laço hostil"}`:""].filter(Boolean).join("; ")));
-      if(x.dialogo) d.appendChild(el("div",{class:"s"},"Diálogo: "+x.dialogo)); if(x.situacao) d.appendChild(el("div",{class:"s"},"Situação interna: "+x.situacao)); if(x.nota) d.appendChild(el("div",{class:"s"},x.nota));
-      dt.appendChild(d); });
-    g.appendChild(dt); });
+  const todas=S.igrejas.filter(x=>!ehOriental(x));
+  if(!todas.length){ g.appendChild(el("p",{class:"note"},"Nenhuma Igreja ou religião registrada.")); return; }
+  const fams=[...FAMILIAS.map(f=>f[0]).filter(t=>t!==ORIENTAL),...new Set(todas.map(x=>x.tipo).filter(t=>!FAMILIAS.some(f=>f[0]===t)))];
+  if(!famAbertas) famAbertas=new Set(fams.filter(t=>todas.some(x=>x.tipo===t&&mexida(x))));
+  const nOr=S.igrejas.length-todas.length;
+  g.appendChild(el("p",{class:"note"},`${todas.length} Igrejas e religiões no quadro${anoDe(S.data_iso)!=null?` de ${anoDe(S.data_iso)}`:""}, por família; cada uma aparece uma vez, e as autônomas e os membros falam pelo grupo que os abrange. Toque numa para ver a ficha: laços, comunhão, o que mudou e a audiência com o líder.${nOr?` As ${nOr} Igrejas católicas orientais estão no Painel: são a Igreja Católica.`:""}`));
+  fams.forEach(t=>{ const xs=todas.filter(x=>x.tipo===t); if(xs.length) g.appendChild(grupoIgrejas(famLabel(t),xs,famAbertas,t)); });
+}
+/* ---------- Painel: as Igrejas católicas orientais, por tradição litúrgica ---------- */
+const TRADS=["bizantina","antioquena","alexandrina","armênia","caldeia (siríaca oriental)"];
+let orAbertas=null;
+function renderOrientais(){ const w=$("orientais"); if(!w) return; w.innerHTML="";
+  const xs=S.igrejas.filter(ehOriental), y=anoJogo();
+  if(!xs.length){ w.appendChild(el("p",{class:"note"},y!=null&&y<1054?"Antes de 1054, as Igrejas do Oriente estão em comunhão com Roma e aparecem na aba Mundo.":"Nenhuma Igreja oriental em comunhão com Roma registrada nesta época.")); return; }
+  const med=Math.round(xs.reduce((n,g)=>n+g.relacao,0)/xs.length), mov=xs.filter(g=>g.relacao!==3);
+  const r=el("div",{class:"ind"}), lb=el("div",{class:"icl"}), i0=ic("unidade",18); i0.style.color=lvColor(med); lb.appendChild(i0); lb.appendChild(document.createTextNode(`Sintonia com Roma (${xs.length} ${xs.length>1?"Igrejas":"Igreja"} sui iuris)`)); r.appendChild(lb); r.appendChild(pips(med));
+  r.appendChild(el("div",{class:"lvl"},`Média: ${LV[med]}. ${mov.length?`Fora do estável: ${mov.map(g=>`${g.nome} (${LV[g.relacao]})`).join(", ")}.`:"Nenhuma fora do estável."}`)); w.appendChild(r);
+  if(!orAbertas) orAbertas=new Set(TRADS.filter(t=>xs.some(g=>tradOr(g)===t&&mexida(g))));
+  TRADS.forEach(t=>{ const ys=xs.filter(g=>tradOr(g)===t); if(ys.length) w.appendChild(grupoIgrejas(`Tradição ${t}`,ys,orAbertas,t)); });
 }
 function linhaLaco(l,eu){ const d=el("div",{class:"item rel"}); const g=LACO_T[l.tipo]||0; d.appendChild(el("span",{class:"badge "+(g>=2?"b-bad":g===0?"b-good":"")},l.tipo));
   if(eu){ d.appendChild(document.createTextNode("com ")); d.appendChild(linkNome(outroLado(l,eu))); } else { d.appendChild(linkNome(l.a)); d.appendChild(document.createTextNode(" e ")); d.appendChild(linkNome(l.b)); }
@@ -3726,7 +3779,7 @@ function renderLacos(){
   if(!ls.length) w.appendChild(el("p",{class:"note"},"Nenhum laço registrado ainda entre Igrejas, Estados e facções presentes no jogo."));
   [["Hostis: tensão, rivalidade, ruptura, guerra e perseguição",l=>(LACO_T[l.tipo]||0)>=1],["Comunhão, diálogo e aliança",l=>!(LACO_T[l.tipo]||0)]].forEach(([tit,f])=>{ const xs=ls.filter(f).sort((a,b)=>(LACO_T[b.tipo]||0)-(LACO_T[a.tipo]||0)); if(!xs.length) return; w.appendChild(el("div",{class:"sub"},tit)); xs.forEach(l=>w.appendChild(linhaLaco(l))); });
   const log=(S.mundoLog||[]).slice(-10).reverse(); if(log.length){ w.appendChild(el("div",{class:"sub"},"O que mudou no mundo")); log.forEach(m=>w.appendChild(el("div",{class:"item s"},`${m.data?m.data+" · ":""}${m.texto}`))); }
-  if(author&&(S.historia||[]).length){ w.appendChild(el("div",{class:"sub",style:"color:var(--red)"},"História real guardada para o narrador (modo autor)")); S.historia.slice().sort((a,b)=>a.data.localeCompare(b.data)).forEach(h=>w.appendChild(el("div",{class:"item s"},`${h.papal?"(decisão papal) ":""}${h.texto}`))); }
+  if(author&&(S.historia||[]).length){ w.appendChild(el("div",{class:"sub",style:"color:var(--red)"},"História real guardada para o narrador (modo autor)")); S.historia.slice().sort((a,b)=>a.data<b.data?-1:a.data>b.data?1:0).forEach(h=>w.appendChild(el("div",{class:"item s"},`${h.papal?"(decisão papal) ":""}${h.texto}`))); }
 }
 function comunhaoTexto(x){ const t=x.tipo;
   if(t===PRE_CISMA) return "Em comunhão com Roma e com as demais Igrejas do Oriente.";
@@ -3734,16 +3787,17 @@ function comunhaoTexto(x){ const t=x.tipo;
   if(t==="ortodoxa não canônica") return "Fora da comunhão das Igrejas ortodoxas canônicas e de Roma.";
   if(t==="ortodoxa oriental") return "Em comunhão com as demais Igrejas ortodoxas orientais (coptas, siríacos, armênios, etíopes, eritreus, malankara), salvo as rupturas abaixo; sem comunhão com Roma desde Calcedônia.";
   if(t==="igreja do oriente") return "Sem comunhão com Roma nem com as outras Igrejas orientais; diálogo teológico com Roma.";
-  if(t==="católica oriental") return "Em plena comunhão com Roma e com as demais Igrejas católicas.";
+  if(t===ORIENTAL) return "Em plena comunhão com Roma: parte da Igreja Católica, com hierarquia, sínodo e direito próprios (Código dos Cânones das Igrejas Orientais). A sintonia com Roma pesa na unidade, não no ecumenismo.";
   if(t==="velho-católica e independente") return "Fora da comunhão com Roma.";
   if(t==="anglicana") return "Fora da comunhão com Roma; províncias autônomas.";
   if(t==="tradicionalista") return "Fora da comunhão plena com Roma.";
   return ""; }
 function fichaIgreja(nome){ const x=acharIgreja(nome); if(!x) return false; const dlg=$("fichaDlg"), c=$("fichaCorpo"), av=$("fichaAv"), cat=igCat(x);
   c.innerHTML=""; av.innerHTML=""; av.appendChild(el("span",{class:"simb ficha-simb","aria-hidden":"true"},simbolo(x)));
-  $("fichaNome").textContent=x.nome; $("fichaSub").textContent=[famLabel(x.tipo),cat&&cat.d>0?`desde ${cat.d}`:""].filter(Boolean).join(" · ");
-  const tags=el("div",{class:"icl ficha-tags"}); tags.appendChild(el("span",{class:"badge "+(x.relacao>=4?"b-good":x.relacao<=2?"b-bad":"")},`relação com Roma: ${LV[x.relacao]}`)); if(x.lider) tags.appendChild(el("span",{class:"badge"},x.lider)); c.appendChild(tags);
-  [x.dialogo?`Diálogo: ${x.dialogo}`:"",x.situacao?`Situação interna: ${x.situacao}`:"",x.nota||"",cat&&cat.por?`Origem: ${cat.por}.`:"",comunhaoTexto(x)].filter(Boolean).forEach(t=>c.appendChild(el("p",{class:"s"},t)));
+  const orl=ehOriental(x), inc=abrange(cat,anoJogo()??2026);
+  $("fichaNome").textContent=x.nome; $("fichaSub").textContent=[orl?`Igreja Católica · tradição ${tradOr(x)}`:famLabel(x.tipo),cat&&cat.d>0?`desde ${cat.d}`:""].filter(Boolean).join(" · ");
+  const tags=el("div",{class:"icl ficha-tags"}); tags.appendChild(el("span",{class:"badge "+(x.relacao>=4?"b-good":x.relacao<=2?"b-bad":"")},`${orl?"sintonia":"relação"} com Roma: ${LV[x.relacao]}`)); if(x.lider) tags.appendChild(el("span",{class:"badge"},x.lider)); c.appendChild(tags);
+  [x.dialogo?`${orl?"Com Roma":"Diálogo"}: ${x.dialogo}`:"",x.situacao?`Situação interna: ${x.situacao}`:"",x.nota||"",cat&&cat.por?`Origem: ${cat.por}.`:"",inc.length?`Abrange: ${inc.join("; ")}.`:"",comunhaoTexto(x)].filter(Boolean).forEach(t=>c.appendChild(el("p",{class:"s"},t)));
   const ls=lacosDe(x.nome); fichaSec(c,"Laços"); if(ls.length) ls.sort((a,b)=>(LACO_T[b.tipo]||0)-(LACO_T[a.tipo]||0)).forEach(l=>c.appendChild(linhaLaco(l,x.nome))); else c.appendChild(el("p",{class:"note"},"Nenhum laço registrado. Ao aproximar-se de alguém que tem laço hostil com esta Igreja, o Papa a afasta."));
   const lg=(S.mundoLog||[]).filter(m=>m.alvos.some(a=>_sa(a)===_sa(x.nome))).slice(-6).reverse(); if(lg.length){ fichaSec(c,"O que mudou"); lg.forEach(m=>c.appendChild(el("div",{class:"item s"},`${m.data?m.data+" · ":""}${m.texto}`))); }
   const ct=S.caixa.filter(m=>_sa(m.de)===_sa(x.lider)||_sa(m.de)===_sa(x.nome)||_sa(m.de).includes(_sa(x.nome))).slice(-3); if(ct.length){ fichaSec(c,"Correspondência"); ct.forEach(m=>c.appendChild(el("div",{class:"item s"},`${m.data} · ${m.tipo}${m.assunto?`: ${m.assunto}`:""}${m.resposta?" (respondida)":""}`))); }
